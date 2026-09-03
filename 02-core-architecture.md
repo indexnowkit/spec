@@ -147,10 +147,14 @@ indexnow:
     blog.example.com:
       key: '%env(INDEXNOW_KEY_BLOG)%'
       base_url: 'https://blog.example.com'   # генерация URL этого хоста вне HTTP-контекста
+      engines: [yandex]                      # движки только для этого хоста
   strict_hosts: false            # true = хосты вне base_url/hosts пропускаются, а не шлются под дефолтным ключом
+  previous_key: null             # ключ до ротации: файл ключа отдаётся, отправка под ним не идёт; также hosts.<host>.previous_key
   key_location: null             # опционально, полный URL файла ключа (на хосте base_url)
   base_url: 'https://www.example.com'   # для генерации абсолютных URL вне HTTP-контекста (CLI, воркеры)
   environment: '%env(APP_ENV)%'  # не-production без ключа включает dry_run вместо падения
+  production_environments: [prod, production]  # какие имена считать production
+  max_url_length: 2048           # длиннее — invalid_url
   engines: [api]                 # api | yandex | bing | naver | seznam | yep | custom URL
   dispatch: sync                 # sync | queue | none
   queue:                         # специфично для адаптера (transport name, queue name)
@@ -159,6 +163,7 @@ indexnow:
   debounce:
     per_url: 600                 # секунд; 0 = выключить
     store: memory                # memory | cache | <service id>
+    key_prefix: indexnowkit_     # префикс ключей общего кэша
   throttle:
     max_requests_per_minute: 60
   http:
@@ -166,7 +171,27 @@ indexnow:
     user_agent: null             # override
   serve_key_file: true           # адаптер регистрирует GET /{key}.txt
   dry_run: false                 # лог вместо HTTP
+  logging:
+    max_urls: 20                 # сколько URL перечислять в строке лога (0 = только счётчики)
+    forbidden_escalation: 5      # подряд 403 на хост до уровня critical
+    levels: {}                   # переопределение уровня по исходу: ok, pending, rate_limited, debounced, ...
+  retry:                         # RetryPolicy для очередей и RetryingSubmitter
+    max_attempts: 3
+    base_delay: 60
+    multiplier: 2.0
+    max_delay: 3600
+    server_error_delay: 5
+  resolver:
+    max_via_depth: 3             # глубина via:
+    max_via_fanout: 100          # ширина одного via:
+  collector:
+    max_urls: 0                  # ранний flush при накоплении N URL (0 = только в конце)
+    detect_leaks: true           # warning на shutdown о несброшенных URL
 ```
+
+Всё это — `Config::OPTIONS`; адаптер отдаёт свой массив в `Config::fromArray()` и проверяет лишние ключи
+`Config::unknownOptions()`. Адаптер-специфичные блоки (Symfony: `messenger`, `key_file`, `sitemap`, `doctrine`,
+`logging.channel`, `profiler`) он вырезает сам.
 
 Обязательные проверки при старте (framework check / boot validation):
 - `key` или `hosts` задан, если `enabled`.
