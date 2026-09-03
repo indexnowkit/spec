@@ -31,8 +31,10 @@ Guzzle/Symfony HttpClient в require; в `suggest`. Тулинг: PHPUnit 11, ph
 
 Реализовано в 0.2.0. Отличия от первоначального наброска: троттл живёт в `Client` (один токен на HTTP-запрос),
 `GuardedUrlResolver` — единственная точка «объект → URL» для фасада и ORM-хуков (никогда не бросает),
-`ObjectChangeHandler` — общий блок ORM-хука, `SitemapReader` потоковый (XMLReader) с ограничением на
-host/глубину/размер, `Psr18Transport::discover(timeout:)` настраивает symfony/http-client или Guzzle (таймаут,
+`ObjectChangeHandler` — общий блок ORM-хука, `SitemapReader` потоковый (документы во временных файлах,
+gzip по кускам, XMLReader по файлу; память не зависит от размера) с ограничением на host/глубину/размер и
+опцией `allowForeignHosts`, `Http\StreamingTransportInterface::download($url, $sink)` — необязательное
+расширение транспорта для чтения тела без буферизации (`Psr18Transport`, `LazyTransport`, `FakeTransport`), `Psr18Transport::discover(timeout:)` настраивает symfony/http-client или Guzzle (таймаут,
 без редиректов), `LazyTransport` откладывает discovery до первого запроса. Debug-режим `transport.method: get`
 из 01-protocol.md не реализован сознательно: POST покрывает все случаи.
 

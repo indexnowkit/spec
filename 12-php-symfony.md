@@ -118,7 +118,13 @@ scoped-клиенты) оборачивается в `Psr18Client`, `null` — �
 `indexnow:submit <urls...> [-f|--force] [--dry-run] [--json]`,
 `indexnow:submit-entity <class> [ids...] [--event] [--limit] [--explain] [-f|--force] [--dry-run] [--json]`,
 `indexnow:explain <class> <id> [--event]`,
-`indexnow:sitemap [sitemap] [--changed-since] [-f|--force] [--dry-run] [--json]`.
+`indexnow:sitemap [sitemap] [--changed-since] [--allow-foreign-hosts] [-f|--force] [--dry-run] [--json]`.
+
+`indexnow:sitemap` читает потоком (`SitemapReader` складывает документы во временные файлы) и отправляет каждые
+`batch.max_urls` URL, сводя результаты в `ResultSummary` (строка на engine/host/status со счётчиками `urls` и
+`batches`): список URL целиком в памяти не живёт. Блок конфига `sitemap` — `enabled` (false = команды и сервиса
+`indexnowkit.sitemap_reader` нет), `url` (дефолт аргумента вместо `<base_url>/sitemap.xml`), `max_depth`,
+`max_sitemaps`, `max_bytes`, `allow_foreign_hosts`.
 
 `--force` и `--dry-run` собирают отдельный `Submitter` через `SubmitterFactory` (`NullDebounceStore` и/или
 `Config::with(dryRun: true)`), не трогая сервис приложения. Вывод — таблица со столбцом `reason` либо JSON.
