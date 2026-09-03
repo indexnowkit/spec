@@ -46,9 +46,10 @@
 
 - `php/packages/core`: готов. Conformance C01–C22 (C13 в бандле), phpstan 9, PHP 8.2–8.4.
 - `php/packages/doctrine`: готов. A01–A14 на sqlite, ORM 3 + DBAL 4 (DBAL 3 в CI-матрице).
-- `php/packages/symfony-bundle`: готов. H01–H02, A01/A02/A04 функционально, Messenger (C13),
-  команды `indexnow:key:generate|check|submit|sitemap`, Flex-рецепт в `recipe/`.
-- Не сделано: Web Profiler панель, публикация на Packagist, PR рецепта в recipes-contrib, Laravel.
+- `php/packages/symfony-bundle`: готов. H01–H03, A01/A02/A04 функционально, Messenger (C13),
+  команды `indexnow:key:generate|check|submit|submit-entity|sitemap`, Web Profiler панель, Flex-рецепт в `recipe/`,
+  split-workflow для Packagist (`.github/workflows/split.yml`, нужен secret SPLIT_TOKEN и репо `php-core|php-doctrine|php-symfony-bundle`).
+- Git: локальный коммит в корне yaindexnow. Не сделано: GitHub org (нужен логин в Chrome), push, Packagist, PR рецепта, Laravel.
 
 ## Открытые решения
 
