@@ -1,89 +1,152 @@
 # 12. PHP: `indexnowkit/symfony-bundle`
 
-Symfony 6.4 LTS, 7.x. Тип `symfony-bundle`. Зависимости: `core`, `doctrine` (optional через
-`suggest`, включается при наличии `doctrine/doctrine-bundle`), `symfony/http-kernel`,
-`symfony/routing`, `symfony/console`. Flex-рецепт в `symfony/recipes-contrib`.
+Symfony 6.4 LTS, 7.x. Тип `symfony-bundle`. Зависимости: `indexnowkit/core`, `symfony/config`,
+`symfony/console`, `symfony/dependency-injection`, `symfony/event-dispatcher`, `symfony/framework-bundle`,
+`symfony/http-foundation`, `symfony/http-kernel`, `symfony/routing`. В `suggest`: `indexnowkit/doctrine` +
+`doctrine/doctrine-bundle` (хуки сущностей), `symfony/messenger`, `symfony/http-client`, `nyholm/psr7`,
+`symfony/web-profiler-bundle`. Flex-рецепт в `recipe/`.
 
 ## Установка
 
 ```bash
-composer require indexnowkit/symfony-bundle     # рецепт: config/packages/indexnow.yaml, .env INDEXNOW_KEY=, routes
+composer require indexnowkit/symfony-bundle
+composer require indexnowkit/doctrine     # автоотправка при изменении сущностей
 ```
 
 ```yaml
-# config/packages/indexnow.yaml (из рецепта)
-indexnow:
+# config/packages/indexnowkit.yaml (из рецепта)
+indexnowkit:
     key: '%env(INDEXNOW_KEY)%'
-    base_url: '%env(INDEXNOW_BASE_URL)%'   # для CLI/воркеров; в HTTP берётся из Request
-    dispatch: messenger                     # sync | messenger
-    messenger: { bus: messenger.bus.default, transport: async }   # transport опционален (routing)
-    debounce: { per_url: 600, store: cache.app }
-    serve_key_file: true
+    base_url: '%env(INDEXNOW_BASE_URL)%'
+when@dev:  { indexnowkit: { dry_run: true } }
+when@test: { indexnowkit: { dry_run: true } }
 ```
 
-`AbstractBundle` (6.1+): `configure(DefinitionConfigurator)` по схеме 02, `loadExtension()`,
-`prependExtension()` добавляет routing `messenger` для `SubmitUrlsMessage`, если `dispatch: messenger`
-и transport указан.
+Алиас расширения — `indexnowkit`. `AbstractBundle`: `configure(DefinitionConfigurator)` по схеме 02 плюс
+Symfony-специфичные блоки, `loadExtension()`, `prependExtension()`.
+
+## Дерево конфигурации
+
+`enabled`, `key`, `base_url`, `key_location`, `hosts` (`host => key` либо `{key, key_location, base_url}`),
+`strict_hosts`, `engines`, `dispatch` (`auto|sync|messenger|none`), `messenger.{bus,transport}`,
+`batch.max_urls`, `debounce.{per_url,store}`, `throttle.max_requests_per_minute`,
+`http.{timeout,user_agent,client}`, `key_file.{enabled,path,host,cache_max_age}`, `serve_key_file`
+(устаревший алиас `key_file.enabled`), `dry_run`, `doctrine.{enabled,listener_priority,connections}`.
+
+Проверки на этапе компиляции: `dispatch: messenger` без `base_url`; `hosts` без `base_url`; `strict_hosts`
+без единого известного хоста; пустой `engines`; литеральный `key` не по формату; литеральный `base_url` не
+абсолютный; неизвестный движок; `key_file.path` без `{key}`; `dispatch: messenger` без symfony/messenger.
+Значения вида `%env(...)%` пропускаются (резолвятся в рантайме).
+
+Ошибка в env-значении **не** ломает контейнер и не бросает из flush: `ConfigFactory` ловит
+`ConfigurationException`, пишет `critical` и возвращает `Config(enabled: false, dryRun: true)`; точную ошибку
+печатает `indexnow:check`.
+
+`hosts` — array-нода, её нельзя заполнить из одной env-переменной; плейсхолдеры ставятся на каждый ключ.
 
 ## Объявление сущности
 
 ```php
 #[ORM\Entity]
-#[IndexNow(route: 'post_show', params: ['slug' => 'slug'], when: 'isPublished', fields: ['slug','title','body','published'])]
+#[IndexNowDefaults(when: 'isPublished', fields: ['slug','title','body','published'])]
+#[IndexNow(route: 'post_show', params: ['slug' => 'slug'])]
+#[IndexNow(route: 'post_amp', params: ['slug' => 'slug'], when: 'hasAmp')]
+#[IndexNow(via: 'category')]
 class Post { ... }
 ```
 
-`RouteUrlResolver` → `UrlGeneratorInterface::generate($route, $params, ABSOLUTE_URL)`.
-Вне HTTP-контекста `RequestContext` берётся из `router.request_context` с `base_url`
-(бандл выставляет `host`/`scheme` из `base_url` в `ConsoleCommandEvent` и в Messenger-воркере
-через `WorkerMessageReceivedEvent`).
+`SymfonyRouteUrlResolver` реализует `RouteUrlResolverInterface`:
 
-Локали: если маршрут локализован (`_locale` в requirements), резолвер генерирует URL для
-всех `enabled_locales` (опция `locales: all|current|[list]` в атрибуте).
+- `locales('all')` → `%kernel.enabled_locales%`, `'current'` → `[null]`, список → как задан;
+  локаль подставляется в маршрут параметром `_locale`.
+- `generate()` → `UrlGeneratorInterface::ABSOLUTE_URL`. Вне HTTP-запроса контекст берётся из `base_url`;
+  правило с `host:` генерируется на `hosts.<host>.base_url` (иначе `https://<host>`). Контекст роутера
+  временно подменяется и восстанавливается в `finally`. Ошибка роутера превращается в
+  `ConfigurationException` с именем маршрута.
+
+`#[IndexNow(resolver: ...)]` резолвится через `ContainerResolverLocator`: любой сервис
+`UrlResolverInterface` автоконфигурируется тегом `indexnowkit.url_resolver` и доступен по своему id
+(при стандартной автоконфигурации `App\` это FQCN). Класс без зависимостей инстанцируется на месте; класс с
+зависимостями, не зарегистрированный под этим id, даёт понятную ошибку.
 
 ## Проводка Doctrine
 
-- Listener из 11 как сервис с тегом `doctrine.event_listener` на `loadClassMetadata`,
-  `onFlush`, `postFlush`, `priority: -100`, для всех `connections`/`entity_managers` из
-  конфига `doctrine.orm` (или подмножество `indexnow.doctrine.entity_managers`).
-- Middleware из 11 с тегом `doctrine.middleware` (DoctrineBundle ≥ 2.6).
-- `ConnectionRegistry`: бандл инжектит `doctrine` ManagerRegistry, staging маппит по имени соединения.
+- `IndexNowListener` — сервис с тегами `doctrine.event_listener` на `onFlush` и `postFlush`,
+  `priority: %indexnowkit.doctrine.listener_priority%` (по умолчанию `-100`, после Gedmo).
+- `IndexNowMiddleware` — тег `doctrine.middleware`.
+- `doctrine.connections` ограничивает оба тега перечисленными соединениями (пусто = все).
+- Хуки включаются только при наличии `indexnowkit/doctrine` **и** `doctrine/doctrine-bundle`, при
+  `doctrine.enabled: true` и `enabled: true`. Иначе `indexnow:check` печатает предупреждение, а не молчит.
+  Параметр `indexnowkit.doctrine_hooked` отражает фактическое состояние.
 
 ## Commit → Collector → Dispatcher
 
-- `Collector` request-scoped: сервис с `kernel.reset` (`ResetInterface`), вместе с
-  `kernel.terminate` listener (после отправки ответа) и `console.terminate` listener.
-  Messenger-воркер: `WorkerMessageHandledEvent` → flush.
-- `dispatch: sync`: в terminate вызывается `Submitter` напрямую.
-- `dispatch: messenger`: `SubmitUrlsMessage(array $urls, int $attempt = 0)` +
-  `#[AsMessageHandler]`; при 429/5xx handler бросает `RecoverableMessageHandlingException`
-  с `retryDelay`, retry_strategy transport'а. При 403/422/400 `UnrecoverableMessageHandlingException`.
-  Сообщение диспатчится с `DispatchAfterCurrentBusStamp`, если мы внутри обработки другого
-  сообщения (сохраняет гарантию `doctrine_transaction` middleware).
+- `Collector` — сервис с тегом `kernel.reset`; `reset()` на непустом буфере логирует `warning`.
+- `FlushListener` слушает `kernel.terminate` (priority `-1000`, до `ProfilerListener`), `console.terminate`
+  и `Messenger\Event\WorkerMessageHandledEvent`. Фасад достаётся из service locator, поэтому запрос, ничего
+  не собравший, его не инстанцирует.
+- `dispatch: sync` → `SyncDispatcher`; `messenger` → `MessengerDispatcher` (`DispatchAfterCurrentBusStamp`);
+  `none` → `NullDispatcher`. `auto` → `messenger`, если установлен symfony/messenger и объявлены
+  `framework.messenger.transports`, иначе `sync`; при `enabled: false` — всегда `none`.
+- `SubmitUrlsMessage(list<string> $urls)` + `#[AsMessageHandler] SubmitUrlsHandler`. Ретраибельный исход
+  (429/5xx/сеть) → `RecoverableMessageHandlingException`; на Symfony ≥ 7.2 в неё передаётся задержка из
+  `Retry-After` (мс). 400/403/422 финальны и только логируются. Мёртвые письма — штатный
+  `framework.messenger.failure_transport`, своей команды пакет не даёт.
+- `messenger.transport: async` заставляет `prependExtension()` добавить
+  `framework.messenger.routing[SubmitUrlsMessage] = async`; параметр `indexnowkit.messenger_routed`
+  показывает, действительно ли сообщение маршрутизировано.
+
+## HTTP-клиент
+
+`TransportFactory`: сервис `http.client` — PSR-18 используется как есть, `symfony/http-client` (включая
+scoped-клиенты) оборачивается в `Psr18Client`, `null` — автообнаружение с `http.timeout` и без редиректов.
+Сам транспорт — `LazyTransport`: клиент строится при первом запросе, поэтому запрос без отправок ничего не
+стоит, а `indexnow:check` сообщает об отсутствии клиента как об ошибке проверки.
 
 ## Key file
 
-Роут `indexnow_key_file`: `GET /{key}.txt`, requirements `[A-Za-z0-9-]{8,128}`, контроллер
-сравнивает с `KeyProvider`, 404 иначе. Регистрируется через `RoutingConfigurator` в
-`prependExtension` (routes loader `indexnow.routes`), выключается `serve_key_file: false`.
-Приоритет роута ниже пользовательских (регистрируется последним).
+Роут `indexnowkit_key_file`: `GET %indexnowkit.key_file.path%` (по умолчанию `/{key}.txt`), requirement
+`[A-Za-z0-9-]{8,128}`, host из `%indexnowkit.key_file.host%`. `KeyFileController` спрашивает
+`KeyFileResponder::bodyForKey($key, $request->getHost())`, поэтому отдаётся только ключ **этого** хоста;
+иначе 404. Заголовки — `text/plain; charset=utf-8` и `Cache-Control: public, max-age=key_file.cache_max_age`
+(300 с по умолчанию, чтобы ротация ключа расходилась быстро). Выключается `key_file.enabled: false`.
 
 ## Команды
 
-`indexnow:key:generate [--write-env]`, `indexnow:check`, `indexnow:submit <url>...`,
-`indexnow:submit-entity <class> <id>`, `indexnow:sitemap <url|--presta>` (если установлен
-`presta/sitemap-bundle`, обходит его dumper через `SitemapPopulateEvent`).
+`indexnow:key:generate [-l|--length] [--alphanumeric] [--write-env[=FILE]] [--force]`,
+`indexnow:check [--live] [--host]`,
+`indexnow:submit <urls...> [-f|--force] [--dry-run] [--json]`,
+`indexnow:submit-entity <class> [ids...] [--event] [--limit] [--explain] [-f|--force] [--dry-run] [--json]`,
+`indexnow:explain <class> <id> [--event]`,
+`indexnow:sitemap [sitemap] [--changed-since] [-f|--force] [--dry-run] [--json]`.
+
+`--force` и `--dry-run` собирают отдельный `Submitter` через `SubmitterFactory` (`NullDebounceStore` и/или
+`Config::with(dryRun: true)`), не трогая сервис приложения. Вывод — таблица со столбцом `reason` либо JSON.
+`indexnow:submit-entity` и `indexnow:explain` регистрируются только при доступной Doctrine.
+
+`indexnow:explain` проходит весь путь решения одной сущности: правила → подписка на событие → `when` →
+`fields` → URL → нормализация → host/ключ/файл ключа → дебаунс. Ничего не отправляет.
 
 ## Профайлер
 
-`DataCollector` в Web Profiler: сколько URL собрано в запросе, что отправлено, результаты.
-Панель ускоряет отладку «почему не отправилось».
+`IndexNowDataCollector` (late collector) + `ResultRecorder`, слушатель `Submitter`: панель показывает
+собранные URL, реальные результаты (включая синхронную отправку на `kernel.terminate`, которая происходит
+после клонирования коллекторов), режим dispatch и факт маршрутизации в Messenger, движки, `base_url`,
+`strict_hosts`, окно дебаунса и URL файла ключа по каждому хосту (ключ замаскирован).
+
+## Логирование
+
+Канал Monolog `indexnow` (`IndexNowKitLoader::LOG_CHANNEL`) на всех логирующих сервисах: клиент, submitter,
+throttle, collector, резолверы, change handler, фасад, dispatcher, messenger handler, listener Doctrine.
 
 ## Тесты
 
-`symfony/framework-bundle` test kernel, ORM sqlite, Messenger `in-memory://`. Матрица 6.4/7.2/7.3+.
+`symfony/framework-bundle` test kernel, ORM sqlite, Messenger `in-memory://`, транспорт подменяется на
+`IndexNowKit\Testing\FakeTransport` алиасом `indexnowkit.transport` в compiler pass (тот же рецепт
+документирован для пользователей). Матрица 6.4/7.x, PHP 8.2–8.4. Сценарии H01–H03, H06, A01/A02/A04, C13.
 
 ## Flex recipe
 
-`manifest.json`: `bundles`, `copy-from-recipe` (`config/packages/indexnow.yaml`), `env`
-(`INDEXNOW_KEY=`, `INDEXNOW_BASE_URL=`). `.yaml`, 4 пробела в JSON, PR в `symfony/recipes-contrib`.
+`recipe/`: `config/packages/indexnowkit.yaml` (ключ, base_url, закомментированные примеры мультидомена,
+Messenger и scoped-клиента, `dry_run: true` в dev и test) и `config/routes/indexnowkit.yaml`.
+PR в `symfony/recipes-contrib` — открытая задача (91).

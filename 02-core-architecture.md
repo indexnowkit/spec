@@ -7,23 +7,27 @@
 ## Компоненты
 
 ```
- ┌──────────────┐  submit(urls, reason)  ┌────────────┐   flush()   ┌──────────────┐
+ ┌──────────────┐  submit(urls)          ┌────────────┐   flush()   ┌──────────────┐
  │ ChangeSource │ ─────────────────────▶ │ Collector  │ ──────────▶ │  Dispatcher  │
  │ (ORM hook,   │                        │ (per-req   │             │ sync | queue │
  │  CLI, user)  │                        │  buffer)   │             └──────┬───────┘
- └──────────────┘                        └────────────┘                    │
-        │ resolve(entity) ▲                                                ▼
- ┌──────┴───────┐         │                                     ┌──────────────────┐
- │ UrlResolver  │─────────┘                                     │ Submitter        │
- │ (per model)  │                                               │ debounce→batch→  │
- └──────────────┘                                               │ throttle→Client  │
-                                                                └────────┬─────────┘
-                                                                         ▼
-                                                                ┌──────────────────┐
-                                                                │ Client (HTTP)    │
-                                                                │ + KeyProvider    │
-                                                                └──────────────────┘
+ └──────┬───────┘                        └────────────┘                    │
+        │ created/updated/deleted                  ▲                       ▼
+ ┌──────▼────────────┐                             │              ┌──────────────────┐
+ │ ObjectChangeHandler│ classify per rule          │              │ Submitter        │
+ │  + ChangeClassifier│                            │              │ debounce→batch→  │
+ └──────┬─────────────┘                            │              │ Client           │
+        │ resolveRule(subject, rule, event)        │              └────────┬─────────┘
+ ┌──────▼───────┐   reads   ┌──────────────┐       │                       ▼
+ │ UrlResolver  │◀──────────│  UrlRule[]   │───────┘              ┌──────────────────┐
+ │  (guarded)   │           │ (per class)  │                      │ Client (HTTP)    │
+ └──────────────┘           └──────────────┘                      │ + KeyProvider    │
+                                                                  │ + Throttle       │
+                                                                  └──────────────────┘
 ```
+
+`UrlRule` — единица объявления (одно семейство публичных URL класса), `ObjectChangeHandler` — единица
+работы ORM-хука (одно правило × одно событие жизненного цикла).
 
 ### Client
 
@@ -34,7 +38,12 @@
   сконфигурированный engine.
 - Вход: `KeyProvider`, `HttpTransport` (абстракция HTTP клиента языка), `ClientOptions`
   (engines, timeout, userAgent, method).
-- `Result { engine, host, urlCount, status: 'ok'|'pending'|'failed', httpCode, error?, retryable: bool }`.
+- `Result { engine, host, urls[], status: 'ok'|'pending'|'failed'|'skipped', httpCode?, reason?, error?,
+  retryable: bool, retryAfter?, endpoint }`.
+- `reason` — машиночитаемая причина любого неуспеха, стабильный идентификатор для метрик и алертов:
+  `disabled`, `dry_run`, `debounced`, `no_key`, `invalid_url` (ничего не отправлено) и `invalid_request`,
+  `invalid_key`, `unprocessable`, `rate_limited`, `server_error`, `transport`, `unexpected` (отправка не удалась).
+  `error` — человеческая формулировка, не API.
 - Не бросает исключений на HTTP-ошибки протокола; бросает только на программные ошибки
   (невалидный ключ в конфиге, пустой список).
 - User-Agent: `indexnowkit-<lang>/<version> (+https://indexnowkit.dev)`.
@@ -47,23 +56,40 @@
   `ConfigurationError` немедленно при старте приложения, не при первой отправке.
 - `KeyGenerator.generate(length=32)` из CSPRNG, только `[a-f0-9]`.
 
-### UrlResolver
+### UrlRule и UrlResolver
 
-- `resolve(subject, event) -> Url[]` где `event ∈ {created, updated, deleted}`.
-  Возвращает 0..n URL: одна сущность может иметь несколько страниц (локали, форматы) или
-  ни одной (черновик).
-- Реализации в адаптерах: из атрибута/декоратора модели, из колбэка пользователя, из
-  `getAbsoluteUrl()`-подобного метода.
-- Контракт для `deleted`: адаптер обязан вызвать `resolve` до фактического удаления
-  (pre-remove) и сохранить URL до post-commit.
-- Фильтр публикации: `shouldSubmit(subject, event) -> bool` (например `status == published`).
-  Дефолт: true. Переход published → draft трактуется как `deleted` (URL тот же, страница
-  теперь 404); адаптер не обязан это определять сам, но даёт хук.
+`UrlRule` — скомпилированная, языконезависимая модель одного семейства публичных URL класса
+(см. «Объявление модели» ниже). Класс объявляет **список** правил; всё остальное работает по правилам.
+
+- `UrlResolver.resolve(subject, event) -> Url[]`, где `event ∈ {created, updated, deleted}`.
+  Возвращает 0..n URL: одна сущность может иметь несколько страниц (локали, форматы, связанные объекты)
+  или ни одной (черновик).
+- Дефолтная реализация обходит правила класса и резолвит каждое через его источник. Пользовательский
+  резолвер (`resolver:` в правиле или замена целиком) остаётся возможным.
+- `explain(subject, event) -> ResolvedUrl[]`, где `ResolvedUrl { url, rule, class, event, locale? }`, —
+  та же работа с сохранением происхождения: для `explain`-команд, логов и панелей профайлера.
+- Контракт для `deleted`: адаптер обязан вызвать резолв до фактического удаления (pre-remove) и
+  сохранить URL до post-commit.
+- Guard-обёртка (`GuardedUrlResolver`) — единственная точка «объект → URL» для фасада и ORM-хуков:
+  никогда не бросает, ошибку декларации или резолвера пишет в лог и возвращает пустой список.
+
+### ObjectChangeHandler
+
+Общий для всех адаптеров блок «объект изменился → URL»: поиск правил, классификация события
+**по каждому правилу** и guard-резолв. Никогда не бросает.
+
+- Хуки, срабатывающие до записи (нет идентификаторов): `createdEvents/updatedEvents/deletedEvents ->
+  RuleEvent[]`, позже `resolve(subject, ruleEvent) -> ResolvedUrl[]`.
+- Хуки, срабатывающие после записи (observer-ы, save-хуки): `created/updated/deleted -> ResolvedUrl[]`.
+- Удаления и правила, переставшие применяться, резолвятся, пока живо старое состояние.
 
 ### Collector
 
-- Буфер на единицу работы (HTTP-запрос, CLI-команда, job). `add(url, reason)`, `drain() -> UrlSet`.
+- Буфер на единицу работы (HTTP-запрос, CLI-команда, job). Интерфейс: `add(urls)`, `all()`, `count()`,
+  `isEmpty()`, `drain() -> UrlSet`, `reset()`. Заменяем: durable outbox, буфер на тенанта.
 - Дедуп внутри буфера. Ключ дедупа: нормализованный URL.
+- `reset()` очищает буфер **без доставки** (долгоживущие рантаймы) и обязан логировать предупреждение,
+  если буфер был не пуст: единица работы закончилась без `flush()`, URL потеряны.
 - Привязка к запросу: PHP request-scoped сервис, Python contextvar, JS AsyncLocalStorage,
   Go context, Java request scope/ThreadLocal, .NET scoped service.
 - `flush()` вызывается адаптером в конце единицы работы (kernel.terminate,
@@ -100,10 +126,14 @@
 
 - Core принимает абстрактный logger языка (PSR-3, `logging`, pino-совместимый объект,
   slog, SLF4J, ILogger).
-- Уровни: success `debug`, pending(202) `info`, 4xx `error` (403) / `warning` (422),
-  429/5xx `warning` (с retry) / `error` (после исчерпания).
-- Опциональный `MetricsSink` с двумя счётчиками: `indexnow_submitted_urls_total{engine,status}`,
-  `indexnow_requests_total{engine,http_code}`.
+- Уровни: success `debug`, pending(202) `info`, dry-run `info`, `enabled: false` `info`, 4xx `error` (403,
+  400) / `warning` (422), 429/5xx `warning`, пятый подряд 403 на хост — один раз `critical`.
+- Все сообщения начинаются с `indexnow: `; ключи маскируются везде, включая тела ответов и тексты
+  исключений.
+- Метрики строятся из `Result`: низкокардинальные метки `status`, `engine`, `reason`, `http_code`,
+  `retryable`. `host` намеренно не входит (неограничен в мультитенантных установках).
+- Причины «тихих» отказов (правило не подписано на событие, `when` ложен, `fields` не совпал) пишутся на
+  уровне `debug`: это и есть ответ на вопрос «почему ничего не отправилось».
 
 ## Единая схема конфигурации
 
@@ -113,10 +143,14 @@
 indexnow:
   enabled: true                  # false = ничего не отправлять, но всё логировать как dry-run
   key: '%env(INDEXNOW_KEY)%'     # дефолтный ключ
-  hosts:                         # опционально, host → key (мультисайт)
-    blog.example.com: '%env(INDEXNOW_KEY_BLOG)%'
-  key_location: null             # опционально, полный URL файла ключа
+  hosts:                         # опционально, host → key либо host → {key, key_location, base_url}
+    blog.example.com:
+      key: '%env(INDEXNOW_KEY_BLOG)%'
+      base_url: 'https://blog.example.com'   # генерация URL этого хоста вне HTTP-контекста
+  strict_hosts: false            # true = хосты вне base_url/hosts пропускаются, а не шлются под дефолтным ключом
+  key_location: null             # опционально, полный URL файла ключа (на хосте base_url)
   base_url: 'https://www.example.com'   # для генерации абсолютных URL вне HTTP-контекста (CLI, воркеры)
+  environment: '%env(APP_ENV)%'  # не-production без ключа включает dry_run вместо падения
   engines: [api]                 # api | yandex | bing | naver | seznam | yep | custom URL
   dispatch: sync                 # sync | queue | none
   queue:                         # специфично для адаптера (transport name, queue name)
@@ -154,17 +188,108 @@ indexnow:
 `check` делает: валидирует конфиг, скачивает `https://<host>/<key>.txt`, сравнивает тело,
 шлёт тестовый POST с `dry_run`. Это первая команда в README, она снимает 80% issue «не работает».
 
-## Объявление модели (единый смысл, разный синтаксис)
+## Объявление модели: правила URL
 
-Минимальная форма: указать, как из объекта получить URL.
+Класс объявляет **список правил** (`UrlRule`), по одному на семейство публичных страниц. Синтаксис
+объявления свой в каждом языке; скомпилированная модель одна и та же. Адаптер обязан привести своё
+объявление к этому виду, дальше вся логика (классификация событий, guard-ы, локали, `via`, дедуп)
+общая.
 
-- PHP: `#[IndexNow(route: 'post_show', params: ['slug' => 'slug'])]` или `#[IndexNow(resolver: PostUrlResolver::class)]`.
-- Python: `class Post(IndexNowModel, models.Model)` c `get_absolute_url()` или `indexnow.register(Post, url=lambda p: ...)`.
-- JS: `indexNow.model('Post', { url: p => `/posts/${p.slug}`, when: p => p.published })`.
-- Ruby: `index_now url: ->(p) { post_url(p) }, if: :published?`.
+```
+UrlRule {
+  name:       string                    # стабильный id для логов, отладки и переопределения в наследниках
+  source:     route | resolver | via | url | urls    # ровно один
+  route:      string?                   # имя маршрута фреймворка
+  params:     map<string, ParamValue>   # accessor | value | formatted | call
+  resolver:   string?                   # id сервиса/класса UrlResolver
+  via:        string?                   # accessor к связанному объекту или коллекции
+  url:        string?                   # accessor, возвращающий string | iterable<string> | null
+  urls:       string[]                  # литеральные URL
+  when:       string[]                  # конъюнкция: все accessor-ы должны быть истинны
+  whenFields: string[]                  # поля модели, от которых зависит when (для определения старого состояния)
+  fields:     string[]                  # фильтр изменённых полей; [] = любые
+  events:     (created|updated|deleted)[]
+  locales:    'current' | 'all' | string[]
+  host:       string | ParamValue | null
+}
+```
 
-Общие опции: `when`/`if` (фильтр публикации), `events` (подмножество created/updated/deleted),
-`on_fields` (отправлять только если изменились указанные поля; дефолт: любые).
+`ParamValue` — закрытый набор из четырёх источников: `accessor` (строка: свойство, геттер,
+`is`/`has`-метод, точечный путь, `self`), `value` (константа), `formatted` (accessor + формат даты),
+`call` (метод с аргументами; плейсхолдеры локали и хоста подставляются для каждого генерируемого
+URL). Всё, что не выражается этими четырьмя, — повод написать `resolver`. Языки с замыканиями в
+объявлении (JS, Ruby) могут принимать функцию вместо accessor-строки: это деталь фронтенда, `UrlRule`
+от этого не меняется.
+
+### Политика уровня класса
+
+Класс может задать общие `when`, `fields`, `events`, `locales`. `when` **конъюнктивен**: правило
+добавляет своё условие к условию класса, а не заменяет его (страница черновика не публична, что бы ни
+говорило правило). Остальные три — значения по умолчанию: правило, задавшее своё, выигрывает
+(`null` = наследовать, `[]` = без фильтра).
+
+### Наследование
+
+Правила собираются от корня иерархии к листу. Правило с тем же `name`, что и у предка, **заменяет**
+его; правило с новым `name` добавляется. Политика класса сливается по полям, ближайшее объявление
+выигрывает. Интерфейсы и трейты не сканируются.
+
+### Имена полей
+
+`fields` и `whenFields` — **имена полей модели** в том виде, в каком их пишет разработчик, никогда не
+имена колонок БД. Doctrine `getEntityChangeSet()`, Django `update_fields`/FieldTracker и Prisma
+`args.data` дают именно их. Объявленное поле совпадает с изменённым, если они равны или одно является
+точечным префиксом другого, поэтому `fields: ['address']` ловит изменение встроенного объекта
+`address.city`.
+
+### Видимость и события
+
+Видимость правила вычисляется до и после изменения. Переход `true → false` — `deleted` **для URL этого
+правила** (остальные правила класса продолжают жить); `false → true` — `created`; без перехода —
+`updated`, отфильтрованный по `fields`. Если старое значение `when` невычислимо, но изменилось хотя бы
+одно поле из `when`/`whenFields`, считается, что видимость переключилась: ложное срабатывание стоит
+одного лишнего запроса, пропуск оставляет мёртвую страницу в индексе. Поле, стоящее за accessor-ом,
+ищется по имени, затем по конвенции (`isPublished` → `published` → `is_published`, `getStatus` →
+`status`).
+
+Удаление объекта, для которого правило неприменимо, **не отправляется**: страница и так не была
+публичной.
+
+| Событие ORM | `when` до | `when` после | `fields` совпал | Событие правила |
+|---|---|---|---|---|
+| insert | — | true | — | `created` |
+| insert | — | false | — | нет |
+| update | true | true | да | `updated` |
+| update | true | true | нет | нет |
+| update | true | false | не важно | **`deleted`** (резолв по текущему состоянию, до записи) |
+| update | false | true | не важно | `created` |
+| update | false | false | — | нет |
+| delete | — | true | — | `deleted` (резолв до удаления) |
+| delete | — | false | — | нет |
+
+### `via`
+
+`via` переотправляет страницы связанного объекта (комментарий → его пост, товар → его категория).
+Цель всегда резолвится как `updated` — её страница существует независимо от того, что случилось с
+источником. Глубина ограничена (по умолчанию 3), количество связанных объектов на правило — тоже
+(по умолчанию 100).
+
+### Пример соответствия синтаксисов
+
+| | PHP | Python | JS |
+|---|---|---|---|
+| правило | повторяемый `#[IndexNow(...)]` | повторяемый декоратор `@indexnow(...)` | элемент `rules: [...]` |
+| политика | `#[IndexNowDefaults(...)]` | `@indexnow_defaults(...)` | поля модели вне `rules` |
+| accessor | `'category.slug'` | `"category.slug"` | `'category.slug'` или `p => p.category.slug` |
+| константа | `new Value('html')` | `Value("html")` | `{ value: 'html' }` |
+| из метода | `#[IndexNowUrl]` на методе | `get_absolute_url()` через миксин | `url: p => ...` |
+
+### Правила, регистрируемые в рантайме
+
+Модели, которые не могут нести атрибуты (типы записей CMS, чужие классы), регистрируют правила в коде.
+Реестр реализует тот же контракт чтения правил поверх внутреннего ридера: статически по классу либо
+фабрикой, решающей по объекту. Зарегистрированные правила заменяют то, что вернул бы внутренний ридер,
+наследники их наследуют.
 
 ## Поведение при ошибках
 

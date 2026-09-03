@@ -44,13 +44,27 @@
 
 ## Статус реализации (2026-09-03)
 
-- `php/packages/core`: 0.2.0 после аудита по семи линзам (API, протокол, безопасность, надёжность, тесты, документация,
-  производительность) — см. `php/packages/core/CHANGELOG.md`. Conformance C01–C22 в core (C13 через `RetryingSubmitter`),
-  phpstan 9, PHP 8.2–8.4, README EN/RU, split-репо с собственным CI/SECURITY/CHANGELOG.
-- `php/packages/doctrine`: готов. A01–A14 на sqlite, ORM 3 + DBAL 4 (DBAL 3 в CI-матрице).
-- `php/packages/symfony-bundle`: готов. H01–H03, A01/A02/A04 функционально, Messenger (C13),
-  команды `indexnow:key:generate|check|submit|submit-entity|sitemap`, Web Profiler панель, Flex-рецепт в `recipe/`,
-  split-workflow для Packagist (`.github/workflows/split.yml`, deploy-ключи в секретах SPLIT_SSH_KEY_*).
+**0.2.0 — переработана, ещё не отмечена тегом.** Все три PHP-пакета переписаны вокруг модели правил
+(`UrlRule`, повторяемый `#[IndexNow]`, `#[IndexNowDefaults]`, `#[IndexNowUrl]`, `ObjectChangeHandler`), фасад
+переименован в `IndexNowKit`, у `Result` появилась причина (`Reason`), `TransactionStaging` переехал в core.
+Ломающие изменения перечислены в `php/CHANGELOG.md`; публикации в Packagist пока не было.
+
+- `php/packages/core`: 0.2.0 после аудита по семи линзам (API, протокол, безопасность, надёжность, тесты,
+  документация, производительность) плюс переработка модели URL — см. `php/packages/core/CHANGELOG.md`.
+  Conformance C01–C22 (C13 через `RetryingSubmitter`), phpstan 9, PHP 8.2–8.4, README EN/RU, `docs/`
+  (конфигурация, справочник по атрибутам, повторы и очереди, эксплуатация, тестирование, гайд автора
+  адаптера, BC), тестовые двойники `IndexNowKit\Testing` в публикуемом пакете, split-репо с собственным
+  CI/SECURITY/CHANGELOG.
+- `php/packages/doctrine`: 0.2.0. A01–A14 на sqlite плюс A15–A20 (несколько правил, удаление по правилу,
+  `when`-геттер, удаление черновика, `via`, изменение коллекции), ORM 3 + DBAL 4 (DBAL 3 в CI-матрице),
+  README EN/RU, собственный CHANGELOG.
+- `php/packages/symfony-bundle`: 0.2.0. H01–H03, A01/A02/A04 функционально, Messenger (C13), полное дерево
+  конфигурации с проверками на этапе компиляции, команды
+  `indexnow:key:generate|check|submit|submit-entity|explain|sitemap`, Web Profiler панель с результатами,
+  `docs/` (конфигурация, мультидомен, Messenger, HTTP-клиент, Doctrine, свои резолверы, тестирование,
+  диагностика), Flex-рецепт в `recipe/`, split-workflow для Packagist
+  (`.github/workflows/split.yml`, deploy-ключи в секретах SPLIT_SSH_KEY_*).
+  `indexnowkit/doctrine` переведён из require в suggest.
 - Опубликовано 2026-09-03: GitHub org `indexnowkit` (репо php, php-core, php-doctrine, php-symfony-bundle, spec), npm org
   `indexnowkit`, Packagist `indexnowkit/core|doctrine|symfony-bundle` 0.1.0. E2E-установка в чистый Symfony 7.4 skeleton
   с DoctrineBundle 3.3 проверена. Автообновление Packagist: GitHub-хуки установлены самим Packagist (OAuth-доступ приложения к org выдан, sync через packagist.org/trigger-github-sync/).

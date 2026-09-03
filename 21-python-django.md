@@ -33,6 +33,15 @@ class Article(models.Model): ...
 
 Также `indexnow.register(Model, ...)` вызовом в `AppConfig.ready()` для чужих моделей.
 
+Под этим лежит общая модель правил из 02: декоратор `@indexnow(...)` **накладываемый** (несколько на класс,
+по одному на семейство публичных URL), класс-политика — `@indexnow_defaults(...)`, `get_absolute_url()`
+регистрируется миксином как правило с источником `url`. Все три формы компилируются в один и тот же список
+`UrlRule`, поэтому семантика `when`/`when_fields`/`fields`/`events`/`locales`/`host`/`name`, наследование по
+имени правила, `via` и правило «переход `when: True → False` — это `deleted` для URL именно этого правила»
+совпадают с PHP до мелочей. `indexnow.register(...)` — реестр правил в рантайме, а не альтернативный путь
+исполнения. Имена полей в `fields`/`when_fields` — имена полей модели (то, что даёт `update_fields` или
+`FieldTracker`), не колонки БД.
+
 ## Хуки и commit-safety
 
 - `AppConfig.ready()` подключает `post_save`, `post_delete`, `pre_delete`, `pre_save` только

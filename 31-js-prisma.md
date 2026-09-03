@@ -13,6 +13,15 @@ const prisma = new PrismaClient().$extends(withIndexNow(indexNow, {
 
 Типы `models` выводятся из `Prisma.ModelName` и payload-типов, `url` получает typed record.
 
+Значение каждой модели — не плоский объект, а список правил общей модели из 02:
+`models: { post: { when, fields, events, locales, rules: [ { route|resolver|via|url|urls, params, when,
+whenFields, fields, events, locales, host, name } ] } }`. Поля вне `rules` — политика уровня класса (её `when`
+конъюнктивен с `when` правила, остальное — значения по умолчанию), каждый элемент `rules` — одно семейство
+публичных URL с ровно одним источником. Везде, где PHP принимает строку-accessor, JS дополнительно принимает
+замыкание (`p => p.category.slug`): это деталь фронтенда, скомпилированный `UrlRule` от этого не меняется.
+Отсюда же берутся семантика удаления по правилу (`when: true → false` удаляет URL только этого правила),
+`via` для связанных записей и наследование правил по `name`.
+
 ## Детекция изменений
 
 Query extension `$allModels.$allOperations` перехватывает `create`, `update`, `upsert`,

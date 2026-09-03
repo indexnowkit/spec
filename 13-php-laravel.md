@@ -28,6 +28,15 @@ class Post extends Model { use IndexNowable; }
   атрибут `#[ObservedBy]` не нужен пользователю.
 - Альтернатива без trait: `IndexNow::observe(Post::class, url: fn (Post $p) => route('posts.show', $p))` в `AppServiceProvider::boot`.
 
+Модель объявления — общая (02, «Объявление модели: правила URL»). Атрибут `#[IndexNow]` из core повторяем:
+на модели ставится по одному атрибуту на семейство публичных URL, общая политика класса выносится в
+`#[IndexNowDefaults]`, метод, возвращающий URL, помечается `#[IndexNowUrl]`. Всё это компилируется в
+`UrlRule[]`, и дальше работают общие `ObjectChangeHandler`, `ChangeClassifier` и `GuardedUrlResolver`;
+адаптеру остаются мост к роутеру (`RouteUrlResolverInterface` поверх `route()`, включая route model binding
+через `params: ['post' => 'self']`) и хуки Eloquent. Закрытие `IndexNow::observe(...)` и модели пакетов,
+которые нельзя аннотировать, регистрируются в рантайме через `RuleRegistry` — это тот же набор правил, а не
+отдельный путь исполнения.
+
 ## Commit-safety
 
 `IndexNowObserver implements ShouldHandleEventsAfterCommit`: события `created`, `updated`,
