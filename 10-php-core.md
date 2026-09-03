@@ -20,7 +20,8 @@ rector для матрицы версий. Монорепо `indexnowkit/php` с
 Реализовано в 0.2.0 (2026-09-03). Отличия от первоначального наброска: троттл живёт в `Client` (один токен на HTTP-запрос),
 `GuardedUrlResolver` — единственная точка «объект → URL» для фасада и ORM-хуков (никогда не бросает), `SitemapReader`
 потоковый (XMLReader) с ограничением на host/глубину/размер, `Psr18Transport::discover(timeout:)` настраивает
-symfony/http-client или Guzzle (таймаут, без редиректов).
+symfony/http-client или Guzzle (таймаут, без редиректов). Debug-режим `transport.method: get` из 01-protocol.md
+не реализован сознательно: POST покрывает все случаи, GET-форма протокола не даёт ничего, кроме второго пути в коде.
 
 ## Публичный API
 
