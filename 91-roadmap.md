@@ -48,7 +48,7 @@
 - `php/packages/doctrine`: готов. A01–A14 на sqlite, ORM 3 + DBAL 4 (DBAL 3 в CI-матрице).
 - `php/packages/symfony-bundle`: готов. H01–H03, A01/A02/A04 функционально, Messenger (C13),
   команды `indexnow:key:generate|check|submit|submit-entity|sitemap`, Web Profiler панель, Flex-рецепт в `recipe/`,
-  split-workflow для Packagist (`.github/workflows/split.yml`, нужен secret SPLIT_TOKEN и репо `php-core|php-doctrine|php-symfony-bundle`).
+  split-workflow для Packagist (`.github/workflows/split.yml`, deploy-ключи в секретах SPLIT_SSH_KEY_*).
 - Опубликовано 2026-09-03: GitHub org `indexnowkit` (репо php, php-core, php-doctrine, php-symfony-bundle, spec), npm org
   `indexnowkit`, Packagist `indexnowkit/core|doctrine|symfony-bundle` 0.1.0. E2E-установка в чистый Symfony 7.4 skeleton
   с DoctrineBundle 3.3 проверена. Автообновление Packagist: GitHub-хуки установлены самим Packagist (OAuth-доступ приложения к org выдан, sync через packagist.org/trigger-github-sync/).
