@@ -1,6 +1,6 @@
 # 13. PHP: `indexnowkit/laravel`
 
-Laravel 11, 12. PHP ≥ 8.2. Тип `library`, auto-discovery через `extra.laravel.providers`
+Laravel 11, 12, 13 (13 требует PHP 8.3). PHP ≥ 8.2. Тип `library`, auto-discovery через `extra.laravel.providers`
 (`IndexNowKit\Laravel\IndexNowKitServiceProvider`). Зависимости: `indexnowkit/core ^0.2` и компоненты
 `illuminate/{cache,console,contracts,database,queue,routing,support}`; `laravel/framework` целиком не требуется.
 Тесты: PHPUnit 11 + `orchestra/testbench` (монорепо на PHPUnit, фреймворки не смешиваем — не Pest). Статический
@@ -229,5 +229,6 @@ Testbench, sqlite in-memory, схема через `Schema::create` в setUp, р
   SoftDeletes, `observe()` без trait, `ConfigFactory` с невалидным env, `--json` команд, `route:cache`-совместимость
   роута ключа.
 
-Матрица CI: PHP 8.2–8.5 × Laravel 11 (`--with laravel/framework:^11.0` + testbench 9) и 12; phpstan+larastan на
-highest.
+Матрица CI: PHP 8.2–8.5 × Laravel 11 (`--with laravel/framework:^11.0` + testbench 9, `policy.advisories.block false`:
+все релизы L11 под security advisories), 12 (root platform php 8.2) и 13 (job с platform 8.4 + testbench 11); phpstan+larastan
+на highest.
