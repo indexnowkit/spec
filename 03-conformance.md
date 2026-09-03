@@ -93,11 +93,18 @@ HTTP-сервер (Go, один бинарник), эмулирует `/indexnow
 
 ## Тест-кит для адаптеров
 
-PHP: `IndexNowKit\Testing\Conformance\CoreConformanceTestCase` в core — абстрактный PHPUnit-кейс со сценариями
-C01, C03, C04, C06, C09–C12, C14, C19, C20 против фасада, собранного контейнером адаптера (адаптер отдаёт фасад,
-`FakeTransport` и, опционально, второй настроенный host). Сценарии, требующие особой конфигурации (dry_run,
-enabled: false, engines, окна debounce, throttle), остаются в тестах core. ORM-сценарии A01–A21 адаптер реализует
-сам (Symfony: `tests/Functional/*`), общий ORM-кит появится вместе со вторым ORM-адаптером.
+PHP: два абстрактных PHPUnit-кейса в core (`IndexNowKit\Testing\Conformance`), покрыты BC-обещанием (bc.md).
+
+- `CoreConformanceTestCase` — C01, C03, C04, C06, C09–C12, C14, C19, C20 против фасада, собранного контейнером
+  адаптера (адаптер отдаёт фасад, `FakeTransport` и, опционально, второй настроенный host). Сценарии, требующие
+  особой конфигурации (dry_run, enabled: false, engines, окна debounce, throttle), остаются в тестах core.
+- `OrmConformanceTestCase` — A01–A21 (+A05b вложенный commit, +A05c откат к savepoint) через драйвер, который
+  реализует адаптер: транзакционные глаголы его слоя данных (`begin/commit/rollback`), конец единицы работы
+  (`flush`, `collectedCount`) и фикстуры с фиксированными формами правил (post с `when` и `fields`, multi-post с
+  тремя правилами и getter-`when`, categorized post с `via` и to-many коллекцией, category, untracked, broken,
+  bad attribute; `update/delete/attachTag/bulkUpdateTitle`). URL-конвенции переопределяемы. Эталонные драйверы:
+  `packages/doctrine/tests/OrmConformanceTest.php`, `packages/laravel/tests/Conformance/OrmConformanceTest.php`.
+  Symfony-бандл гоняет A01/A02/A04 функционально поверх Doctrine (`tests/Functional/*`).
 
 ## Реализация
 

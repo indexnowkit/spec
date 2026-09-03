@@ -91,6 +91,7 @@ DQL/QueryBuilder `UPDATE`/`DELETE`, `Connection::executeStatement` событи�
 
 ## Тесты
 
-sqlite pdo, ORM 2.19/3.x × DBAL 3/4. A05: `wrapInTransaction` с исключением после `flush()`. A06: три
-persist один flush → один POST. A15–A20 (см. 03): несколько правил, удаление по правилу, `when`-геттер,
-удаление черновика, `via`, изменение коллекции.
+sqlite pdo, ORM 2.19/3.x × DBAL 3/4. `tests/OrmConformanceTest.php` — драйвер общего кита
+`Testing\Conformance\OrmConformanceTestCase` (A01–A21, A05b/A05c; `autoFlush: false`, `flush()` = `IndexNowKit::flush()`,
+`rollback()` = `em->rollback()` + `clear()`). Doctrine-специфика в `tests/ListenerTest.php`: `wrapInTransaction` с
+исключением после `flush()`, три persist один flush → один POST, id обнуляется после remove, `autoFlush`.
