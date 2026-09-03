@@ -130,10 +130,13 @@ read-only FS), `spool_dir`, `fetch_retries`. При обрыве посреди 
 `SitemapSourceInterface` (alias на `indexnowkit.sitemap_reader`): приложение декорирует или подменяет источник;
 аргумент может быть локальным путём / `file://`. Полная карта точек расширения — `docs/extending.md` бандла.
 
-Symfony-only ноды поверх общей схемы 02: `messenger.{bus, transport, delay, stamps}`, `key_file.*`, `sitemap.*`,
-`doctrine.*`, `logging.channel`, `profiler.enabled`. Alias'ы для декорирования: `ClientInterface`
-(`indexnowkit.client`), `Command\EntityLoaderInterface` (`indexnowkit.entity_loader`), остальные — в
-`docs/configuration.md`. Файл ключа отдаётся с `Vary: Host` при непустом `hosts`.
+Symfony-only ноды поверх общей схемы 02: `messenger.{bus, transport, delay, stamps}`, `key_file.*` (включая
+`route_name`; маршрут строит сервис `indexnowkit.key_file_routes`), `sitemap.*`, `doctrine.*`, `logging.channel`,
+`profiler.enabled`, `flush.{priority, console_priority}`. Alias'ы для декорирования: `ClientInterface`
+(`indexnowkit.client`), `Command\EntityLoaderInterface`, `Command\SubmitterFactoryInterface`,
+`Command\ResultFormatterInterface`, `Check\CheckerInterface` (+ автоконфигурация `Check\CheckInterface` тегом
+`indexnowkit.check`), остальные — в `docs/configuration.md`. Файл ключа отдаётся с `Vary: Host` при непустом
+`hosts`. `tests/Functional/CoreConformanceTest.php` гоняет `CoreConformanceTestCase` ядра против собранного фасада.
 
 `--force` и `--dry-run` собирают отдельный `Submitter` через `SubmitterFactory` (`NullDebounceStore` и/или
 `Config::with(dryRun: true)`), не трогая сервис приложения. Вывод — таблица со столбцом `reason` либо JSON.

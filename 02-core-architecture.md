@@ -155,7 +155,9 @@ indexnow:
   environment: '%env(APP_ENV)%'  # не-production без ключа включает dry_run вместо падения
   production_environments: [prod, production]  # какие имена считать production
   max_url_length: 2048           # длиннее — invalid_url
-  engines: [api]                 # api | yandex | bing | naver | seznam | yep | custom URL
+  engines: [api]                 # api | yandex | bing | naver | seznam | yep | custom URL | alias из engine_aliases
+  engine_aliases: {}             # corp: https://index.corp.example/indexnow
+  locale_hosts: {}               # en: www.example.com, de: example.de — правило с locales и без host генерирует локаль на её хосте
   dispatch: sync                 # sync | queue | none
   queue:                         # специфично для адаптера (transport name, queue name)
   batch:
@@ -174,6 +176,7 @@ indexnow:
   logging:
     max_urls: 20                 # сколько URL перечислять в строке лога (0 = только счётчики)
     forbidden_escalation: 5      # подряд 403 на хост до уровня critical
+    max_body: 300                # байт тела ответа движка в строке лога
     levels: {}                   # переопределение уровня по исходу: ok, pending, rate_limited, debounced, ...
   retry:                         # RetryPolicy для очередей и RetryingSubmitter
     max_attempts: 3

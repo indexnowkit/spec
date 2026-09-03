@@ -83,6 +83,9 @@ DQL/QueryBuilder `UPDATE`/`DELETE`, `Connection::executeStatement` событи�
 
 ## Gedmo-совместимость
 
+При изменении поля, которое читает параметр маршрута (A21), `onFlush` вызывает `ObjectChangeHandler::renamed()`:
+старые URL по прежним значениям change set уходят как deleted вместе с новыми.
+
 Слушатель должен работать после Gedmo Sluggable, который пишет slug в `onFlush`; в бандле listener
 регистрируется с `priority: -100`.
 
