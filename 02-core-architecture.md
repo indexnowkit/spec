@@ -194,7 +194,9 @@ indexnow:
 
 Всё это — `Config::OPTIONS`; адаптер отдаёт свой массив в `Config::fromArray()` и проверяет лишние ключи
 `Config::unknownOptions()`. Адаптер-специфичные блоки (Symfony: `messenger`, `key_file`, `sitemap`, `doctrine`,
-`logging.channel`, `profiler`) он вырезает сам.
+`flush`, `logging.channel`, `profiler`) он вырезает сам. Блок `queue` адаптер называет словарём своего транспорта
+(Symfony: `messenger`, значение `dispatch: messenger` вместо `queue`); `retry.*` он может не выставлять, если повторы
+делает очередь фреймворка.
 
 Обязательные проверки при старте (framework check / boot validation):
 - `key` или `hosts` задан, если `enabled`.
