@@ -124,7 +124,9 @@ scoped-клиенты) оборачивается в `Psr18Client`, `null` — �
 `batch.max_urls` URL, сводя результаты в `ResultSummary` (строка на engine/host/status со счётчиками `urls` и
 `batches`): список URL целиком в памяти не живёт. Блок конфига `sitemap` — `enabled` (false = команды и сервиса
 `indexnowkit.sitemap_reader` нет), `url` (дефолт аргумента вместо `<base_url>/sitemap.xml`), `max_depth`,
-`max_sitemaps`, `max_bytes`, `allow_foreign_hosts`.
+`max_sitemaps`, `max_bytes`, `allow_foreign_hosts`, `spool` (auto|disk|memory: временный файл либо память на
+read-only FS), `spool_dir`, `fetch_retries`. При обрыве посреди sitemap недобранная порция отправляется до выхода
+с кодом 1. `indexnow:check` печатает, куда идёт spool, и почему temp-каталог непригоден.
 
 `--force` и `--dry-run` собирают отдельный `Submitter` через `SubmitterFactory` (`NullDebounceStore` и/или
 `Config::with(dryRun: true)`), не трогая сервис приложения. Вывод — таблица со столбцом `reason` либо JSON.
