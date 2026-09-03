@@ -51,7 +51,7 @@
   split-workflow для Packagist (`.github/workflows/split.yml`, нужен secret SPLIT_TOKEN и репо `php-core|php-doctrine|php-symfony-bundle`).
 - Опубликовано 2026-09-03: GitHub org `indexnowkit` (репо php, php-core, php-doctrine, php-symfony-bundle, spec), npm org
   `indexnowkit`, Packagist `indexnowkit/core|doctrine|symfony-bundle` 0.1.0. E2E-установка в чистый Symfony 7.4 skeleton
-  с DoctrineBundle 3.3 проверена. Автообновление Packagist: secret `PACKAGIST_TOKEN` в репо `indexnowkit/php` (шаг в split.yml).
+  с DoctrineBundle 3.3 проверена. Автообновление Packagist: GitHub-хуки установлены самим Packagist (OAuth-доступ приложения к org выдан, sync через packagist.org/trigger-github-sync/).
 - Не сделано: PR Flex-рецепта в recipes-contrib (отложено пользователем), Laravel.
 
 ## Открытые решения
