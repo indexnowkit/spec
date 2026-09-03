@@ -49,7 +49,10 @@
 - `php/packages/symfony-bundle`: готов. H01–H03, A01/A02/A04 функционально, Messenger (C13),
   команды `indexnow:key:generate|check|submit|submit-entity|sitemap`, Web Profiler панель, Flex-рецепт в `recipe/`,
   split-workflow для Packagist (`.github/workflows/split.yml`, нужен secret SPLIT_TOKEN и репо `php-core|php-doctrine|php-symfony-bundle`).
-- Git: локальный коммит в корне yaindexnow. Не сделано: GitHub org (нужен логин в Chrome), push, Packagist, PR рецепта, Laravel.
+- Опубликовано 2026-09-03: GitHub org `indexnowkit` (репо php, php-core, php-doctrine, php-symfony-bundle, spec), npm org
+  `indexnowkit`, Packagist `indexnowkit/core|doctrine|symfony-bundle` 0.1.0. E2E-установка в чистый Symfony 7.4 skeleton
+  с DoctrineBundle 3.3 проверена. Автообновление Packagist: secret `PACKAGIST_TOKEN` в репо `indexnowkit/php` (шаг в split.yml).
+- Не сделано: PR Flex-рецепта в recipes-contrib (отложено пользователем), Laravel.
 
 ## Открытые решения
 
