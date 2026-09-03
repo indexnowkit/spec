@@ -126,7 +126,9 @@ scoped-клиенты) оборачивается в `Psr18Client`, `null` — �
 `indexnowkit.sitemap_reader` нет), `url` (дефолт аргумента вместо `<base_url>/sitemap.xml`), `max_depth`,
 `max_sitemaps`, `max_bytes`, `allow_foreign_hosts`, `spool` (auto|disk|memory: временный файл либо память на
 read-only FS), `spool_dir`, `fetch_retries`. При обрыве посреди sitemap недобранная порция отправляется до выхода
-с кодом 1. `indexnow:check` печатает, куда идёт spool, и почему temp-каталог непригоден.
+с кодом 1. `indexnow:check` печатает, куда идёт spool, и почему temp-каталог непригоден. Команда зависит от
+`SitemapSourceInterface` (alias на `indexnowkit.sitemap_reader`): приложение декорирует или подменяет источник;
+аргумент может быть локальным путём / `file://`. Полная карта точек расширения — `docs/extending.md` бандла.
 
 `--force` и `--dry-run` собирают отдельный `Submitter` через `SubmitterFactory` (`NullDebounceStore` и/или
 `Config::with(dryRun: true)`), не трогая сервис приложения. Вывод — таблица со столбцом `reason` либо JSON.
