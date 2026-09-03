@@ -192,8 +192,11 @@ binding'а или автоматически разрешимого класса
   потоково, порциями `batch.max_urls`, сводка `ResultSummary`; при обрыве недобранная порция отправляется до
   exit 1; зависит от `SitemapSourceInterface` (binding в контейнере, приложение может подменить).
 
-`--force`/`--dry-run` собирают отдельный `Submitter` (`SubmitterFactory`: `NullDebounceStore`,
-`Config::with(dryRun: true)`), не трогая сервис приложения. Планировщик: `Schedule::command('indexnow:sitemap
+Тела команд живут в core (`Console\*Runner` над `OutputStyle`, он же `SymfonyStyle`); artisan-команды только
+разбирают ввод, слова («model», `php artisan`) задаёт binding `Console\Vocabulary`. `Console\ModelLoader` реализует
+`Console\SubjectLoaderInterface` ядра. `--force`/`--dry-run` собирают отдельный `Submitter`
+(`Console\SubmitterFactory`: `NullDebounceStore`, `Config::with(dryRun: true)`), не трогая сервис приложения.
+Строка про observer в `indexnow:check` — `Check\EloquentCheck`, spool — `Check\SitemapSpoolCheck` ядра. Планировщик: `Schedule::command('indexnow:sitemap
 --changed-since="1 day"')->daily()`.
 
 ## Контейнер
