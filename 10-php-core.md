@@ -7,11 +7,20 @@ rector для матрицы версий. Монорепо `indexnowkit/php` с
 
 ## Пространство имён
 
-`IndexNowKit\` : `Client`, `Config`, `Engine` (enum), `Result` (readonly class), `Submitter`,
-`Key\KeyProvider|StaticKeyProvider|MapKeyProvider|KeyGenerator`, `Url\UrlNormalizer|UrlResolverInterface|Event` (enum
-`Created|Updated|Deleted`), `Collector\Collector`, `Debounce\DebounceStoreInterface|MemoryDebounceStore|Psr16DebounceStore`,
-`Dispatch\DispatcherInterface|SyncDispatcher`, `Http\TransportInterface|Psr18Transport`,
-`Sitemap\SitemapReader`, `Exception\ConfigurationException|InvalidUrlException`, `Attribute\IndexNow`.
+`IndexNowKit\` : `Client`, `Config`, `Engine` (enum), `Event` (enum `Created|Updated|Deleted`), `Result`, `ResultStatus`,
+`Submitter`, `SubmitterInterface`, `IndexNow` (фасад),
+`Key\KeyProviderInterface|StaticKeyProvider|KeyGenerator|KeyValidator`,
+`Url\UrlNormalizerInterface|UrlNormalizer|UrlResolverInterface|RouteUrlResolverInterface|ResolverLocatorInterface|AttributeUrlResolver|GuardedUrlResolver`,
+`Attribute\IndexNow|AttributeReaderInterface|AttributeReader` (+ `@internal` `ParamExtractor`, `PublishGuard`),
+`Collector\Collector`, `Debounce\DebounceStoreInterface|MemoryDebounceStore|Psr16DebounceStore|NullDebounceStore`,
+`Throttle\ThrottleInterface|TokenBucket|NullThrottle`, `Retry\RetryPolicy|RetryingSubmitter`,
+`Dispatch\DispatcherInterface|SyncDispatcher|CallableDispatcher|NullDispatcher`, `Http\TransportInterface|Psr18Transport`,
+`Sitemap\SitemapReader`, `Check\Checker`, `Exception\IndexNowException|ConfigurationException|InvalidUrlException|InvalidArgumentException`.
+
+Реализовано в 0.2.0 (2026-09-03). Отличия от первоначального наброска: троттл живёт в `Client` (один токен на HTTP-запрос),
+`GuardedUrlResolver` — единственная точка «объект → URL» для фасада и ORM-хуков (никогда не бросает), `SitemapReader`
+потоковый (XMLReader) с ограничением на host/глубину/размер, `Psr18Transport::discover(timeout:)` настраивает
+symfony/http-client или Guzzle (таймаут, без редиректов).
 
 ## Публичный API
 
@@ -58,7 +67,7 @@ core дополняет `base_url`.
 
 ## Debounce
 
-`Psr16DebounceStore(CacheInterface $cache, string $prefix = 'indexnow:')`: ключ `sha1(url)`,
+`Psr16DebounceStore(CacheInterface $cache, string $prefix = 'indexnow_')`: ключ `sha1(url)`,
 TTL = `debounce.per_url`. Адаптеры подставляют `cache.app` (Symfony) / `Cache::store()` (Laravel).
 
 ## CLI
@@ -68,4 +77,5 @@ TTL = `debounce.per_url`. Адаптеры подставляют `cache.app` (S
 
 ## Conformance
 
-`tests/Conformance/CoreTest.php` с `#[DataProviderExternal]` из YAML (symfony/yaml dev).
+`tests/Conformance/CoreConformanceTest.php`, C01–C22 (C13 через `RetryingSubmitter`). YAML-фикстуры из репо `spec` — позже,
+когда появится второй язык.
