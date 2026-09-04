@@ -696,7 +696,9 @@ sitemap-пакет добавляет `Sitemap\Console\Definitions::sitemap()`. 
 - Описания команд унифицированы: бандл в `#[AsCommand(description:)]` держит тот же текст (атрибут — константа,
   нужен ленивой загрузке), `applyTo()` ставит его же; Laravel берёт `$definition->description` в конструкторе перед
   `parent::__construct()` вместе с `$signature`. Yii2 `options()`/`optionAliases()` строятся из определений;
-  описания опций в Yii печатаются из docblock'ов контроллера и не унифицируются (ограничение Yii).
+  описания и дефолты опций в `php yii help indexnow/<action>` — тоже: `IndexNowController::getActionOptionsHelp()`
+  подменяет `comment`/`default` из `CommandDefinition` действия (yii2 0.5.0; раньше печатались docblock'и свойств
+  контроллера). `sitemap` без пакета — прежнее поведение Yii.
 - Тест `DefinitionsTest` в core: сигнатура artisan снапшотом, `applyTo()` через `Symfony\Component\Console\Command`,
   списки Yii, покрытие `SubmitSubjectsOptions` (порядок параметров конструктора = порядок аргументов + опций);
   `Sitemap\Tests\Unit\DefinitionsTest` — то же для `SitemapOptions`.
