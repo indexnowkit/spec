@@ -1,6 +1,6 @@
 # 16. core 0.4 / 0.5 «adapter kit»: вынос sitemap, конфиг-фабрика, общие блоки адаптеров
 
-Статус: спецификация v2 (после адверсального ревью 2026-09-04), не реализовано. Основание: аудит core 0.3.1 и четырёх
+Статус: спецификация v2 (после адверсального ревью 2026-09-04); волна A выпущена 2026-09-05 (core 0.4.0), волна B реализована (core 0.5.0) — отклонения в разделах «Уточнения по реализации». Основание: аудит core 0.3.1 и четырёх
 адаптеров (Yii2 как контрольный «новый адаптер на готовом core»). Цель: авторинг адаптера с 6 до 9, API/тесты/документация
 с 8 до 9, без потери 9 по протоколу, надёжности и безопасности.
 
@@ -707,8 +707,15 @@ sitemap-классы в другом пакете (транзитивно уст
 
 ### core 0.4 → 0.5
 
-`Adapter\Services`/`ServicesBuilder`, `Hook\ObserverHelper`, `Retry\WorkerOutcome`, `Console\Definitions`,
-`Testing\*Assertions` — additive. Breaking не планируется; если появится — фиксируется здесь до релиза.
+| Изменение | Тип | Миграция |
+|---|---|---|
+| `Adapter\ServicesBuilder`/`Services`, `Hook\ObserverHelper`, `Retry\WorkerOutcome`, `Console\Definitions` + `CommandDefinition`/`ArgumentDefinition`/`OptionDefinition`, `Testing\KeyFileAssertions`/`CheckOutputAssertions`, `Sitemap\Console\Definitions` | additive | — |
+| sitemap 0.1.1 требует core ^0.5 (модель `CommandDefinition`); адаптеры требуют core ^0.5 и sitemap ^0.1.1 | зависимости | обновлять адаптер |
+| Тексты логов адаптеров: observer'ы — строки `ObserverHelper` (нет отдельной «before deletion»); воркеры — строки `WorkerOutcome` (Messenger «job {id}» вместо «message {id}», Yii2 «will be retried» вместо «were not accepted…», Laravel с `(attempt N)`) | тексты логов (не API) | алерты по уровням, не по тексту (bc.md) |
+| Описания команд унифицированы (`submit-entity`/`submit-model`, `explain`, аргумент класса); имена аргументов/опций, service id, `ArrayInput`-ключи не менялись; `SubmitEntityCommand`/`ExplainCommand` бандла и `SubmitModelCommand`/`ExplainCommand` Laravel получают `Vocabulary` в конструктор | help-тексты; конструкторы команд | только при ручном инстанцировании команд |
+| Yii2: публичный `IndexNowComponent::services()` | additive | — |
+
+Breaking в core нет.
 
 ## 10. Риски и контрольные вопросы
 
@@ -751,7 +758,9 @@ sitemap-классы в другом пакете (транзитивно уст
 Волна B:
 
 - Гейты дублей: `WeakMap` в observer'ах адаптеров (только через `ObserverHelper`); `retryableUrls()`/`isRetryable` в
-  воркерах адаптеров; `->addOption(` с литералами описаний вне `Definitions`.
-- Тест паритета `Services` зелёный; coverage-floor файл в репо; `docs/adapters.md` §2 покрыт тестом в core.
+  воркерах адаптеров; `->addOption(` с литералами описаний вне `Definitions`. Проверка: `grep -rn "WeakMap\|retryableUrls\|isRetryable\|addOption(\|addArgument(\|protected \$signature" php/packages/{laravel,yii2,symfony-bundle}/src` пуст.
+- Тест паритета `Services` зелёный (`ServicesParityTest`); coverage-floor файлы в репо
+  (`packages/{core,sitemap}/tests/coverage-floor.txt`, job `coverage` в root `ci.yml`, `bin/coverage-floor`);
+  `docs/adapters.md` §2 покрыт тестом в core (`TwentyMinuteAdapterTest`, на `ServicesBuilder` + `ObserverHelper`).
 - Повторный аудит по линзам: API 9, авторинг 9, DX пользователя 9, тесты 9, документация 9; протокол/надёжность/безопасность
   9 без регрессий.
