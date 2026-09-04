@@ -85,6 +85,12 @@
 - Волна C спеки 16 — **выпущена 2026-09-05**: core 0.5.1, symfony-bundle 0.6.0, laravel 0.7.0, yii2 0.4.0:
   `indexnowkit/sitemap` снова `suggest` в адаптерах (`Check\StaticCheck`, `ConfigFactory(ignoreBlocks:)`, заглушка
   команды, sitemap-проводка за предикатом). Yii3 и Битрикс — следующие (спека 15, core 0.5 как база).
+- Долги после волн A–C — **закрыты 2026-09-05**: symfony-bundle 0.6.1, yii2 0.5.0 (без релиза core/sitemap/doctrine/laravel):
+  `split.yml` в три стадии (core → sitemap → адаптеры) с ожиданием dev-main на Packagist (`bin/packagist-wait-main`);
+  help опций Yii из `Console\Definitions`; phpstan doctrine на флейворе dbal3 (`phpstan.dbal3.neon`, без baseline);
+  `IndexNowKitLoader::load()` по блокам (`ContainerShapeTest`), `Yii2\Wiring`/`References` из компонента;
+  `SubmitUrlsJob` yii2 перепушивает остаток с задержкой `Retry-After`/`retry.*`. Остаётся до 1.0:
+  `ParamExtractor::registerReader()` (статическая регистрация, спека 16 §0).
 
 ## Открытые решения
 
