@@ -91,10 +91,14 @@ CHANGELOG.
   «keep your sitemap for Google» остаётся: это про протокол, не про пакет.
 - CHANGELOG core 0.4.0: раздел «Removed» с миграцией (§9).
 
-Гейт (DoD): `grep -ril sitemap packages/core --exclude-dir=vendor` возвращает ровно `CHANGELOG.md`, `README.md`,
-`README.ru.md`, `composer.json`; в `composer.json` — одно вхождение (description), в README EN/RU — строка таблицы
-Family плюс Google-абзац (два слова «sitemap» про протокол, не про пакет). Остальные документы core (`docs/*.md`,
-SECURITY) говорят «пакет-дополнение из таблицы семейства», не называя его.
+Гейт (DoD): `grep -ril sitemap packages/core --exclude-dir=vendor --exclude-dir=.phpunit.cache
+--exclude=composer.monorepo.json` возвращает ровно `CHANGELOG.md`, `README.md`, `README.ru.md`, `composer.json`,
+`docs/bc.md`, `docs/adapters.md`; в `composer.json` — одно вхождение (description), в README EN/RU — строка таблицы
+Family плюс Google-абзац (два слова «sitemap» про протокол, не про пакет); в `docs/bc.md` — миграционная заметка
+(что переехало в 0.4.0); в `docs/adapters.md` — ссылки на пакет как на пакет семейства (require, `SitemapConfig::OPTIONS`
+в `ownedOptions`, `SitemapSpoolCheck` в чек-листе DoD). Остальные документы core (`docs/operations.md`,
+`docs/configuration.md`, SECURITY и другие) говорят «пакет-дополнение из таблицы семейства», не называя его; лог-строка
+`invalid sitemap configuration…` документируется в `docs/adapters.md` пакета sitemap, не в core.
 
 Адаптеры при `sitemap.enabled: false`: бандл не регистрирует команду; Laravel и Yii2 печатают `sitemap.enabled is
 false.` и выходят с `INVALID` (Laravel раньше игнорировал флаг в команде). Невалидный блок `sitemap` в Laravel/Yii2 —
@@ -323,6 +327,26 @@ Yii3, Битрикс, plain PHP). Первому нужны фабрики на 
   store адаптера при незаданном `debounce.store` (Laravel/Yii2 `cache`); probe вынесен в `Laravel\Check\CacheStoreProbe`
   и `Yii2\Check\CacheProbe` (invokable), классы `CacheStoreCheck`/`CacheCheck` удалены.
 - `CollectorInterface::count()` добавлен (tier «may grow»); `Collector` его уже имел.
+- `Config::serveKeyFileFrom(array $raw): bool` (статическая, tier Call): единственный источник правила «явный
+  `serve_key_file` побеждает `key_file.enabled`, иначе `true`», с тем же разбором строк, что в `fromArray()`;
+  `fromArray()` вызывает её сама. Нужна адаптерному коду, который намеренно не строит `Config`: маршрут ключа Laravel
+  регистрируется в `boot()` по сырому массиву (тесты и пакеты биндят свой `Config` после boot), `UrlManagerCheck` Yii2
+  читает сырые опции компонента.
+- `Sitemap\Console\SitemapRunner` не принимает `Vocabulary` (§1.3): раннер не печатает ни одного слова из него, поэтому
+  единственный фреймворк-специфичный текст — аргумент `sitemapUrlOption`.
+- `IndexNowKit::create()` с `dispatch` вне `{sync, none}` и без `$dispatcher` бросает `ConfigurationException`
+  (следствие `DispatcherFactory::fromConfig()` без `$queue`; раньше молча ставил `SyncDispatcher`) — в CHANGELOG core
+  0.4.0 как Changed.
+- Laravel `indexnow:sitemap` при `sitemap.enabled: false` печатает `sitemap.enabled is false.` и выходит с `INVALID`
+  (раньше игнорировал флаг), как Yii2; бандл команду не регистрирует (§1.2).
+- Бандл: `DependencyInjection\TransportFactory::create(?object $client, float $timeout, string $id =
+  'indexnowkit.http.client')` — третий параметр `$id` для текста ошибки `TransportFactory::psr18()`; symfony/http-client
+  (включая scoped clients) оборачивается в `Psr18Client`, PSR-18 сервис берётся как есть, `null` — discovery.
+- Root CI: phpstan на doctrine выполняется только на `highest` (DBAL 4 / ORM 3): DBAL 3 / ORM 2 объявляют сигнатуры в
+  docblock'ах, противоречащих DBAL 4 / ORM 3, один код не проходит level 9 на обоих. Условие `if: matrix.package !=
+  'doctrine' || matrix.deps == 'highest'` в `ci.yml`; в split-CI doctrine аналогично.
+- README core EN/RU: Google-абзац «keep your sitemap for Google» остаётся (§1.2) — это про протокол, не про пакет;
+  строка таблицы Family — единственное упоминание пакета.
 
 ### 3.2. `Adapter\Services` и `Adapter\ServicesBuilder` (слой 2, волна B)
 
@@ -631,11 +655,15 @@ sitemap-классы в другом пакете (транзитивно уст
 
 - `bin/ci` зелёный для core, sitemap, doctrine, symfony-bundle, laravel, yii2 на всех флейворах; сплит-CI зелёный, включая
   новый `php-sitemap`.
-- Гейт §1.2: `grep -ril sitemap packages/core --exclude-dir=vendor` → только `CHANGELOG.md`, `README.md`, `README.ru.md`,
-  `composer.json`.
-- Гейты дублей (grep по `packages/{symfony-bundle,laravel,yii2}/src` пуст): `serve_key_file` вне тестов и документации;
-  `is not a PSR-18 client`; `needs a cache`/`match ($store`; `Class "%s" not found`; `intOf(`; `new SitemapReader(`;
-  `'key_file'` и `'sitemap'` как элементы allowed-списков.
+- Гейт §1.2: `grep -ril sitemap packages/core --exclude-dir=vendor --exclude-dir=.phpunit.cache
+  --exclude=composer.monorepo.json` → только `CHANGELOG.md`, `README.md`, `README.ru.md`, `composer.json`, `docs/bc.md`,
+  `docs/adapters.md`.
+- Гейты дублей (grep по `packages/{symfony-bundle,laravel,yii2}/src` пуст): `serve_key_file` — `grep -rn serve_key_file
+  packages/{laravel,yii2}/src` пуст, в бандле допускается только `IndexNowKitConfiguration.php` (deprecated-узел дерева —
+  конфигурация, не логика); правило «явный `serve_key_file` побеждает `key_file.enabled`» живёт в одном месте —
+  `Config::serveKeyFileFrom(array $raw): bool`, которую вызывает `fromArray()` и адаптерный код до построения `Config`
+  (маршрут ключа Laravel в boot, `UrlManagerCheck` Yii2); `is not a PSR-18 client`; `needs a cache`/`match ($store`;
+  `Class "%s" not found`; `intOf(`; `new SitemapReader(`; `'key_file'` и `'sitemap'` как элементы allowed-списков.
 - Регрессионный тест `key_file.enabld` в каждом адаптере.
 - Семь пакетов опубликованы, `indexnowkit/sitemap` на Packagist, changelog'и с миграцией, спека синхронизирована,
   `php/bin/{tag,packagist-wait,release-notes}` в репо.
