@@ -78,7 +78,11 @@
   (у Yii2 нет событий savepoint'ов), `php yii indexnow/*` над раннерами core, yii2-queue. Кит A01–A21 проходит. Yii3 — следующий (та же спека).
 - Волна A спеки 16 — **выпущена 2026-09-05**: core 0.4.0, sitemap 0.1.0, doctrine 0.3.0, symfony-bundle 0.4.0, laravel 0.5.0, yii2 0.2.0 на Packagist (репо `php-sitemap`, split-CI зелёный, GitHub releases из changelog'ов): вынос sitemap в `indexnowkit/sitemap`, `Adapter\ConfigFactory`,
   статические фабрики, мелкие общие блоки; затем core 0.5.0 — `Adapter\Services`, `Hook\ObserverHelper`, `Retry\WorkerOutcome`,
-  `Console\Definitions` (волна B, не начата). Yii3 и Битрикс — после неё.
+  `Console\Definitions`.
+- Волна B спеки 16 — **выпущена 2026-09-05**: core 0.5.0, sitemap 0.1.1, doctrine 0.3.1, symfony-bundle 0.5.0, laravel 0.6.0,
+  yii2 0.3.0 на Packagist (additive в core): `Adapter\ServicesBuilder`/`Services` (Yii2 на них), `Hook\ObserverHelper`,
+  `Retry\WorkerOutcome`, `Console\Definitions`, `Testing\KeyFileAssertions`/`CheckOutputAssertions`, coverage-floor в CI.
+  Yii3 и Битрикс — следующие (спека 15, core 0.5 как база).
 
 ## Открытые решения
 
