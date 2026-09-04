@@ -74,6 +74,9 @@
   переведён на него.
 - Не сделано: PR Flex-рецепта в recipes-contrib (отложено пользователем).
 
+- `php/packages/yii2`: 0.1.0 (2026-09-04, спека 15). Компонент + behavior, verify-on-commit через core `Transaction\VerifyingStaging`
+  (у Yii2 нет событий savepoint'ов), `php yii indexnow/*` над раннерами core, yii2-queue. Кит A01–A21 проходит. Yii3 — следующий (та же спека).
+
 ## Открытые решения
 
 1. Trademark «IndexNow» у Microsoft: допустимо ли в имени бренда. Проверить до первой публикации.

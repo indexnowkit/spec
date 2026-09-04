@@ -9,7 +9,7 @@
 | 01-protocol.md | Протокол IndexNow, коды ответов, политика ретраев |
 | 02-core-architecture.md | Компоненты core, единая схема конфига, объявление модели |
 | 03-conformance.md | Mock-сервер и общий тест-набор |
-| 10–14 | PHP: core, Doctrine, Symfony, Laravel, API Platform/CMS |
+| 10–15 | PHP: core, Doctrine, Symfony, Laravel, API Platform/CMS, Yii2/Yii3 |
 | 20–25 | Python: core, Django, SQLAlchemy, FastAPI, Flask, Wagtail |
 | 30–39 | JS/TS: core, Prisma, TypeORM, Drizzle/Mongoose/Sequelize, Next, Nuxt, SvelteKit/RR7, NestJS, Payload, Strapi/Directus/Sanity |
 | 40–44 | Rails, Go, Spring Boot, .NET, прочее |
