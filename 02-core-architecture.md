@@ -51,7 +51,7 @@
 ### KeyProvider
 
 - `keyFor(host) -> key|null`, `keyLocationFor(host) -> url|null`.
-- Реализации: `StaticKeyProvider` (из конфига/env), `MapKeyProvider` (host → key).
+- Реализации: `StaticKeyProvider` (из конфига/env, включая карту `hosts` host → key).
 - Валидация ключа при построении: regex `^[A-Za-z0-9-]{8,128}$`, иначе
   `ConfigurationError` немедленно при старте приложения, не при первой отправке.
 - `KeyGenerator.generate(length=32)` из CSPRNG, только `[a-f0-9]`.
@@ -116,7 +116,7 @@
    `MemoryDebounceStore` (дефолт для CLI и тестов), адаптеры дают cache-backed
    (PSR-6/16, Django cache, Redis, Rails.cache).
 2. Group by host, split by maxUrls.
-3. Throttle: token bucket `throttle.maxRequestsPerMinute` (только в queue-режиме; в sync
+3. Throttle: token bucket `throttle.maxRequestsPerMinute` (в `Client`, в любом режиме; в sync
    лимит достигается редко, но проверка есть).
 4. `Client.submitAll`.
 5. Mark submitted только для `ok|pending`.
@@ -171,7 +171,20 @@ indexnow:
   http:
     timeout: 10
     user_agent: null             # override
-  serve_key_file: true           # адаптер регистрирует GET /{key}.txt
+    client: null                 # id/класс PSR-18 клиента, резолвит адаптер; null = discovery
+  key_file:
+    enabled: true                # адаптер регистрирует GET /{key}.txt (serve_key_file — deprecated-псевдоним, при явном значении побеждает)
+    cache_max_age: 300           # Cache-Control max-age файла ключа
+  sitemap:                       # пакет indexnowkit/sitemap (SitemapConfig::OPTIONS); адаптер отдаёт блок в SitemapConfig::fromArray()
+    enabled: true
+    url: null                    # по умолчанию <base_url>/sitemap.xml
+    max_depth: 3
+    max_sitemaps: 1000
+    max_bytes: 52428800
+    allow_foreign_hosts: false
+    spool: auto                  # auto | disk | memory
+    spool_dir: null
+    fetch_retries: 2
   dry_run: false                 # лог вместо HTTP
   logging:
     max_urls: 20                 # сколько URL перечислять в строке лога (0 = только счётчики)
@@ -193,8 +206,9 @@ indexnow:
 ```
 
 Всё это — `Config::OPTIONS`; адаптер отдаёт свой массив в `Config::fromArray()` и проверяет лишние ключи
-`Config::unknownOptions()`. Адаптер-специфичные блоки (Symfony: `messenger`, `key_file`, `sitemap`, `doctrine`,
-`flush`, `logging.channel`, `profiler`) он вырезает сам. Блок `queue` адаптер называет словарём своего транспорта
+`Config::unknownOptions()`. Адаптер-специфичные блоки (Symfony: `messenger`, `doctrine`, `flush`, `logging.channel`,
+`profiler`) он объявляет в `ownedOptions` своего `Adapter\ConfigFactory` (спека 16 §2.2); `key_file.*`, `debounce.store`,
+`http.client` — опции core, `sitemap.*` — пакета `indexnowkit/sitemap`. Блок `queue` адаптер называет словарём своего транспорта
 (Symfony: `messenger`, значение `dispatch: messenger` вместо `queue`); `retry.*` он может не выставлять, если повторы
 делает очередь фреймворка.
 
@@ -213,7 +227,7 @@ indexnow:
 | Отправить сущность | `$indexNow->submitEntity($post)` | `indexnow.submit_object(post)` | `indexNow.submitRecord('Post', post)` | `IndexNow.submit_record(post)` |
 | Сгенерировать ключ | `bin/console indexnow:key:generate` | `manage.py indexnow_key` | `npx indexnowkit key` | `rails indexnow:key` |
 | Проверить ключ и конфиг | `indexnow:check` | `manage.py check` | `npx indexnowkit check` | `rails indexnow:check` |
-| Отправить sitemap | `indexnow:submit-sitemap <url>` | `manage.py indexnow_sitemap` | `npx indexnowkit sitemap` | `rails indexnow:sitemap` |
+| Отправить sitemap (PHP: пакет `indexnowkit/sitemap`) | `indexnow:submit-sitemap <url>` | `manage.py indexnow_sitemap` | `npx indexnowkit sitemap` | `rails indexnow:sitemap` |
 
 `check` делает: валидирует конфиг, скачивает `https://<host>/<key>.txt`, сравнивает тело,
 шлёт тестовый POST с `dry_run`. Это первая команда в README, она снимает 80% issue «не работает».

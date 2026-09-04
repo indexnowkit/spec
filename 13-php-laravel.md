@@ -29,7 +29,7 @@ php artisan indexnow:check
 `throttle.max_requests_per_minute`, `http.{timeout,user_agent}`, `logging.{max_urls,forbidden_escalation,max_body,levels}`,
 `retry.*`, `resolver.*`, `collector.*`.
 
-Laravel-специфичные блоки (carve-out; `ConfigFactory::coreOptions()` вырезает их перед `Config::fromArray()`,
+Laravel-специфичные блоки (carve-out; `Adapter\ConfigFactory` core получает их как `ownedOptions` (core 0.4; раньше `ConfigFactory::coreOptions()` вырезал их),
 остаток проверяется `Config::unknownOptions()` — неизвестный ключ пишется `warning`, не ломает загрузку):
 
 | Блок | Значение |
@@ -162,7 +162,7 @@ Bulk-операции (A13): `Post::where(...)->update()`, `delete()`, `Model::i
 - `RouteNotFoundException` / `UrlGenerationException` (`InvalidArgumentException`) → `ConfigurationException` с
   именем маршрута.
 
-`#[IndexNow(resolver: ...)]` резолвится `ContainerResolverLocator`: `app()->make($id)` для зарегистрированного
+`#[IndexNow(resolver: ...)]` резолвится `Url\ArrayResolverLocator(locate:)` core (core 0.4; раньше свой `ContainerResolverLocator`): `app()->make($id)` для зарегистрированного
 binding'а или автоматически разрешимого класса; не `UrlResolverInterface` или неразрешимо → `ConfigurationException`.
 
 ## Key file
@@ -196,7 +196,7 @@ binding'а или автоматически разрешимого класса
 разбирают ввод, слова («model», `php artisan`) задаёт binding `Console\Vocabulary`. `Console\ModelLoader` реализует
 `Console\SubjectLoaderInterface` ядра. `--force`/`--dry-run` собирают отдельный `Submitter`
 (`Console\SubmitterFactory`: `NullDebounceStore`, `Config::with(dryRun: true)`), не трогая сервис приложения.
-Строка про observer в `indexnow:check` — `Check\EloquentCheck`, spool — `Check\SitemapSpoolCheck` ядра. Планировщик: `Schedule::command('indexnow:sitemap
+Строка про observer в `indexnow:check` — `Check\EloquentCheck`, spool — `Sitemap\Check\SitemapSpoolCheck` пакета `indexnowkit/sitemap`. Планировщик: `Schedule::command('indexnow:sitemap
 --changed-since="1 day"')->daily()`.
 
 ## Контейнер

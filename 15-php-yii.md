@@ -109,7 +109,7 @@ rename — имена колонок первичного ключа.
 ```
 
 Компонент — `yii\base\Component implements BootstrapInterface`. `options` = `Config::OPTIONS` плюс carve-out
-(`ConfigFactory::YII_OPTIONS`, вырезаются перед `Config::fromArray()`, остаток → `Config::unknownOptions()` → `warning`):
+(`ConfigFactory::YII_OPTIONS` + `SitemapConfig::OPTIONS` как `ownedOptions` `Adapter\ConfigFactory` core; неизвестные ключи → `warning`):
 
 | Блок | Значение |
 |---|---|
@@ -191,9 +191,9 @@ retry.max_attempts` и ошибка ретраибельна; задержка �
 
 ### Проверки `check`
 
-`QueueCheck` (компонент существует; `SyncQueue` — без ретраев), `CacheCheck` (компонент дебаунса), `UrlManagerCheck`
+`QueueCheck` (компонент существует; `SyncQueue` — без ретраев), `Check\DebounceStoreCheck` core с `CacheProbe` (компонент дебаунса; core 0.4, раньше `CacheCheck`), `UrlManagerCheck`
 (`enablePrettyUrl` для файла ключа, правило добавлено), `ActiveRecordCheck` (behavior/`models` активны),
-`Check\SitemapSpoolCheck` core.
+`Sitemap\Check\SitemapSpoolCheck` пакета `indexnowkit/sitemap`.
 
 ## `indexnowkit/yii3`
 

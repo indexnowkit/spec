@@ -64,7 +64,7 @@ class Post { ... }
   временно подменяется и восстанавливается в `finally`. Ошибка роутера превращается в
   `ConfigurationException` с именем маршрута.
 
-`#[IndexNow(resolver: ...)]` резолвится через `ContainerResolverLocator`: любой сервис
+`#[IndexNow(resolver: ...)]` резолвится через `Url\ArrayResolverLocator(locate:)` core, собранный `Url\ResolverLocatorFactory` (core 0.4; раньше свой `ContainerResolverLocator`): любой сервис
 `UrlResolverInterface` автоконфигурируется тегом `indexnowkit.url_resolver` и доступен по своему id
 (при стандартной автоконфигурации `App\` это FQCN). Класс без зависимостей инстанцируется на месте; класс с
 зависимостями, не зарегистрированный под этим id, даёт понятную ошибку.
@@ -142,7 +142,7 @@ Symfony-only ноды поверх общей схемы 02: `messenger.{bus, tr
 («entity», `bin/console`) задаёт `Console\Vocabulary`. `--force` и `--dry-run` собирают отдельный `Submitter` через
 `Console\SubmitterFactory` (`NullDebounceStore` и/или `Config::with(dryRun: true)`), не трогая сервис приложения.
 Вывод — таблица со столбцом `reason` либо JSON. Строки wiring в `indexnow:check` — `Check\WiringCheck` и
-`Check\SitemapSpoolCheck` ядра, тегированные `indexnowkit.check`.
+`Sitemap\Check\SitemapSpoolCheck` пакета `indexnowkit/sitemap`, тегированные `indexnowkit.check`.
 `indexnow:submit-entity` и `indexnow:explain` регистрируются только при доступной Doctrine.
 
 `indexnow:explain` проходит весь путь решения одной сущности: правила → подписка на событие → `when` →

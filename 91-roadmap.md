@@ -76,7 +76,7 @@
 
 - `php/packages/yii2`: 0.1.0 (2026-09-04, спека 15). Компонент + behavior, verify-on-commit через core `Transaction\VerifyingStaging`
   (у Yii2 нет событий savepoint'ов), `php yii indexnow/*` над раннерами core, yii2-queue. Кит A01–A21 проходит. Yii3 — следующий (та же спека).
-- Следующая волна PHP (спека 16, 2026-09-04, не начата): core 0.4.0 — вынос sitemap в `indexnowkit/sitemap`, `Adapter\ConfigFactory`,
+- Волна A спеки 16 (2026-09-04, реализована; релиз core 0.4.0, sitemap 0.1.0, doctrine 0.3.0, symfony-bundle 0.4.0, laravel 0.5.0, yii2 0.2.0): вынос sitemap в `indexnowkit/sitemap`, `Adapter\ConfigFactory`,
   статические фабрики, мелкие общие блоки; затем core 0.5.0 — `Adapter\Services`, `Hook\ObserverHelper`, `Retry\WorkerOutcome`,
   `Console\Definitions`. Yii3 и Битрикс — после неё.
 

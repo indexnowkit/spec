@@ -1,6 +1,6 @@
 # 10. PHP: `indexnowkit/core`
 
-PHP ≥ 8.2. Зависимости: `psr/http-client`, `psr/http-factory`, `psr/http-message`, `psr/log`, `psr/clock`,
+PHP 8.2–8.5. Зависимости: `psr/http-client`, `psr/http-factory`, `psr/http-message`, `psr/log`, `psr/clock`,
 `psr/event-dispatcher`, `psr/simple-cache` (интерфейсы), `php-http/discovery` (обнаружение клиента). Без
 Guzzle/Symfony HttpClient в require; в `suggest`. Тулинг: PHPUnit 11, phpstan level 9, php-cs-fixer (PER-CS 2).
 Монорепо `indexnowkit/php` с subtree split по пакетам.
@@ -24,7 +24,7 @@ Guzzle/Symfony HttpClient в require; в `suggest`. Тулинг: PHPUnit 11, ph
 - `Retry\` : `RetryPolicy`, `RetryingSubmitter`;
 - `Dispatch\` : `DispatcherInterface`, `SyncDispatcher`, `CallableDispatcher`, `NullDispatcher`;
 - `Http\` : `TransportInterface`, `Psr18Transport`, `LazyTransport`, `Response`, `Exception\TransportException`;
-- `Transaction\TransactionStaging`, `Sitemap\{SitemapReader, SitemapEntry}`,
+- `Transaction\TransactionStaging`, `Adapter\ConfigFactory` (спека 16),
   `Check\{Checker, CheckReport, CheckItem, CheckLevel}`,
   `Testing\{FakeTransport, ArrayLogger, FrozenClock, RecordingDispatcher}`,
   `Exception\{IndexNowException, ConfigurationException, InvalidUrlException, InvalidArgumentException}`.
@@ -130,3 +130,13 @@ TTL = `debounce.per_url` (бандл Symfony передаёт префикс `in
 
 `tests/Conformance/CoreConformanceTest.php`, C01–C22 (C13 через `RetryingSubmitter`). YAML-фикстуры из репо
 `spec` — позже, когда появится второй язык.
+
+## Пакет `indexnowkit/sitemap` (core 0.4+)
+
+Пространство `Sitemap\` (`SitemapReader`, `Spool`, `SpoolMode`, `SitemapEntry`, `SitemapSourceInterface`, `SitemapConfig`,
+`Sitemap\Console\SitemapRunner`, `Sitemap\Check\SitemapSpoolCheck`) живёт в отдельном пакете-потребителе core; в core нет ни
+кода, ни опций, ни текстов про sitemap (спека 16 §1). Адаптеры требуют пакет и строят reader через
+`SitemapReader::fromConfig(SitemapConfig::fromArray($block), $transport, $logger)`. Набор для адаптеров core 0.4:
+`Adapter\ConfigFactory`, фабрики `Http\TransportFactory`, `Debounce\DebounceStoreFactory`, `Dispatch\DispatcherFactory`,
+`fromConfig()` у `Collector`, `TokenBucket`, `AttributeUrlResolver`, `KeyFileResponder`; `Console\ClassNameResolver`,
+`Check\DebounceStoreCheck`, `Url\ArrayResolverLocator(locate:, hint:)`, `Url\RuleAwareUrlResolverInterface`.
