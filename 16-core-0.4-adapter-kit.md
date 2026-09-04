@@ -654,7 +654,7 @@ final readonly class WorkerOutcome
   `$checkCommand` (Laravel `php artisan indexnow:check`, Messenger `bin/console indexnow:check`, Yii2
   `php yii indexnow/check`). Сигнатуры: `retryLog(string $jobId, ?int $delay = null, ?int $attempt = null)`,
   `gaveUpLog(string $jobId, int $attempt)`, `finalLog(string $jobId, string $checkCommand)`. `$attempt` в `retryLog`
-  nullable: Messenger и yii2-queue не сообщают job'у номер попытки; шаблон
+  nullable: Messenger не сообщает job'у номер попытки (yii2-queue тоже нет, с yii2 0.5.0 job несёт `attempt` сам); шаблон
   `indexnow: {count} URL(s) of job {id} will be retried{delay}{attempt}` с `{delay}` = ` in {n}s` и `{attempt}` =
   ` (attempt {n})` или пустыми строками. Messenger теперь тоже говорит «job {id}» (было «message {id}»,
   `docs/messenger.md` бандла обновлён).
@@ -664,8 +664,10 @@ final readonly class WorkerOutcome
   retryable, бросает `RecoverableMessageHandlingException` с `retryAfter` (Symfony ≥ 7.2).
 
 Три воркера сводятся к `WorkerOutcome::of($results)` и своим действиям: Laravel `release($o->delay(...))`/`fail()`,
-Messenger `throw new RecoverableMessageHandlingException` с `retryAfter`, Yii2 `canRetry()` по `hasRetryable()` без
-задержки (yii2-queue не умеет delay из job'а — документируется).
+Messenger `throw new RecoverableMessageHandlingException` с `retryAfter`, Yii2 — перепуш нового `SubmitUrlsJob` с
+остатком, тем же `id`, `attempt + 1` и `$queue->delay($o->delay($policy, $attempt))` (yii2 0.5.0; до него —
+`canRetry()` без задержки, у yii2-queue нет `release($delay)`). `canRetry()` остаётся только для исключений
+(`RetryableSubmissionException` кастомного транспорта/сабмиттера). Sync-драйвер игнорирует задержку — документировано.
 
 ### 4.4. `Console\Definitions` (волна B)
 

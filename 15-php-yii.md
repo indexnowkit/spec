@@ -183,15 +183,21 @@ final class Post extends ActiveRecord
 
 ### Очередь
 
-`yiisoft/yii2-queue` в `suggest`. `SubmitUrlsJob implements RetryableJobInterface`: `execute()` → `submit()`;
-ретраибельные результаты → бросает `RetryableSubmissionException`, `canRetry($attempt, $error)` = `attempt <
-retry.max_attempts` и ошибка ретраибельна; задержка между попытками — драйверная (`ttr`/`attempts`
-очереди), `Retry-After` учесть нельзя (у yii2-queue нет `release($delay)`) — документировано; финальные 400/403/422 →
-`error` в лог, без исключения (иначе очередь ретраила бы бесполезно). `QueueDispatcher` → `Yii::$app->get(queue)->ttr()->delay()->priority()->push($job)`.
+`yiisoft/yii2-queue` в `suggest`. `SubmitUrlsJob implements RetryableJobInterface`: `execute()` → `submit()` →
+`Retry\WorkerOutcome`; ретраибельные результаты (429/5xx/сеть) → job сам перекладывает остаток:
+`$queue->ttr($ttr)->delay($outcome->delay($config->retryPolicy(), $attempt))->push(new SubmitUrlsJob([urls =>
+retryUrls, id => тот же, attempt => attempt + 1, ...]))` и завершается успешно (yii2 0.5.0; `Retry-After` в приоритете,
+иначе `retry.*` компонента, `RetryPolicy` core); `delay()` вернул `null` (`attempt >= retry.max_attempts`) → `gaveUpLog`
+в `error`, без перепуша. Настройки повторов очереди (`attempts`, `ttr`) на 429/5xx не влияют. `canRetry($attempt,
+$error)` = `$error instanceof RetryableSubmissionException && attempt < maxAttempts` — только для исключений
+(клиент core не бросает на HTTP/сеть; кастомный транспорт/сабмиттер может бросить это исключение и получить драйверный
+повтор). Финальные 400/403/422 → `error` в лог, без исключения и без перепуша. Sync-драйвер игнорирует задержку:
+попытки идут подряд в одном `run()` (документировано в `docs/queue.md`, `check` предупреждает). `QueueDispatcher` →
+`Yii::$app->get(queue)->ttr()->delay()->priority()->push($job)` с `attempt => 1`.
 
 ### Проверки `check`
 
-`QueueCheck` (компонент существует; `SyncQueue` — без ретраев), `Check\DebounceStoreCheck` core с `CacheProbe` (компонент дебаунса; core 0.4, раньше `CacheCheck`), `UrlManagerCheck`
+`QueueCheck` (компонент существует; `SyncQueue` — без задержки между попытками), `Check\DebounceStoreCheck` core с `CacheProbe` (компонент дебаунса; core 0.4, раньше `CacheCheck`), `UrlManagerCheck`
 (`enablePrettyUrl` для файла ключа, правило добавлено), `ActiveRecordCheck` (behavior/`models` активны),
 `Sitemap\Check\SitemapSpoolCheck` пакета `indexnowkit/sitemap`, а без него — `Check\StaticCheck` core со строкой
 `sitemap: not installed (…)`.
