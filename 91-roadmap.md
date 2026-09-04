@@ -92,6 +92,11 @@
   `SubmitUrlsJob` yii2 перепушивает остаток с задержкой `Retry-After`/`retry.*`. Остаётся до 1.0:
   `ParamExtractor::registerReader()` (статическая регистрация, спека 16 §0).
 
+- Спека 17 (2026-09-05, v2 после двух адверсальных ревью, не начата): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
+  дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
+  OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
+  Condition), F (verify, history), затем 0.9 без breaking → 1.0. Yii3/Битрикс после.
+
 ## Открытые решения
 
 1. Trademark «IndexNow» у Microsoft: допустимо ли в имени бренда. Проверить до первой публикации.

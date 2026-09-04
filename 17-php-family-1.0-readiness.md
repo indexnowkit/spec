@@ -1,477 +1,497 @@
 # 17. Семейство PHP к 1.0: состав core, DX, UX, SEO, дистрибуция
 
-Статус: спецификация v1, не реализовано. Основание: пять аудитов 2026-09-05 по линзам «состав core», «DX разработчика
-и AI-ассистента», «UX владельца сайта», «SEO-корректность», «дистрибуция» (отчёты в scratchpad сессии, выводы
-перенесены сюда). Исходное состояние: core 0.5.1, sitemap 0.1.1, doctrine 0.3.1, symfony-bundle 0.6.1, laravel 0.7.0,
-yii2 0.5.0.
+Статус: спецификация v2 (после двух адверсальных ревью 2026-09-05: реализуемость — 33 находки, дизайн — 60), не
+реализовано. Основание: пять аудитов по линзам «состав core», «DX разработчика и AI-ассистента», «UX владельца сайта»,
+«SEO-корректность», «дистрибуция». Исходное состояние: core 0.5.1, sitemap 0.1.1, doctrine 0.3.1, symfony-bundle 0.6.1,
+laravel 0.7.0, yii2 0.5.0.
 
-Цель: закрыть всё, что мешает назвать семейство готовым к 1.0 и удобным для трёх аудиторий — автора адаптера,
-разработчика приложения (в том числе через AI-ассистента) и владельца сайта/SEO-специалиста, — по лучшим практикам
-2026 года. Yii3 и Битрикс начинаются после этой спеки на её базе.
+Цель: семейство готово к 1.0 и удобно трём аудиториям — автору адаптера, разработчику приложения (в том числе через
+AI-ассистента) и владельцу сайта/SEO-специалисту. Yii3 и Битрикс начинаются после этой спеки на её базе.
 
 ## 0. Сводка
 
-| Линза | Сейчас | Цель | Главный разрыв |
-|---|---|---|---|
-| Состав core | 125 файлов, 10.2k строк; `symfony/console` и `phpunit` в `suggest`, хотя 12 файлов `src/` их импортируют | ~98 файлов, ноль `Symfony\`/`PHPUnit\` в `src/` | `Console\*` и `Testing\Conformance\*` — фичи, не ядро |
-| DX человека | quickstart 7, ошибки 8, DSL 7, docs 8, testing 8 | 9 | три README-дефекта, перекос Yii2-доков, тихий отказ на ключах `router.locales`/`router.languages` |
-| DX AI-ассистента | 3 | 9 | нет ни одного машиночитаемого артефакта (AGENTS.md, context7.json, Boost, llms.txt) |
-| UX/эксплуатация | ключи 7, наблюдаемость 6, check 7, стейджинг **4**, CLI 8 | 9 | стейджинг с боевым ключом шлёт боевые запросы; `check` без `--json`/`--strict`; нет истории отправок |
-| SEO | протокол 9, вред **5**, удаление 8, дедуп 8, честность 7 | 9 | ни слова про `noindex`/robots/canonical; «≠ индексация» не сказано; дефект дебаунса при нескольких движках |
-| Дистрибуция | metadata 8, GitHub 5, discoverability 5, security 6 | 9 | topics/LICENSE/CoC/templates/Dependabot отсутствуют; витрина Packagist отстаёт |
+| Линза | Сейчас | Главный разрыв |
+|---|---|---|
+| Состав core | 125 файлов, 10.2k строк; `symfony/console` и `phpunit` в `suggest`, хотя 12 файлов `src/` их импортируют | `Console\*` и `Testing\Conformance\*` — фичи, не ядро |
+| DX человека | quickstart 7, ошибки 8, DSL 7, docs 8, testing 8 | три README-дефекта; Yii2-доки в 4–6 раз тоньше; ключи `router.locales`/`router.languages` дают только warning в логе |
+| DX AI-ассистента | 3 | нет машиночитаемых артефактов, которые реально доезжают до ассистента |
+| UX/эксплуатация | ключи 7, наблюдаемость 6, check 7, стейджинг **4**, CLI 8 | стейджинг с боевым ключом шлёт боевые запросы, `check` молчит; нет `--json`/`--strict`; нет истории |
+| SEO | протокол 9, вред **5**, удаление 8, дедуп 8, честность 7 | ни слова про `noindex`/robots/canonical; «≠ индексация» не сказано; дефект дебаунса при нескольких движках |
+| Дистрибуция | metadata 8, GitHub 5, discoverability 5, security 6 | topics/LICENSE/CoC/шаблоны/Dependabot; витрина Packagist отстаёт |
 
 Принципы (продолжают спеку 16):
 
-1. **Фича — потребитель core.** Всё, что не нужно каждому адаптеру в веб-запросе, живёт отдельным пакетом с сохранением
-   FQCN через PSR-4 (приём sitemap). Core не импортирует ни одного фреймворка и ни одного тестового фреймворка.
-2. **Машиночитаемо по умолчанию.** Каждая проверка, конфиг и команда имеют структурный вывод/схему; документация
-   индексируется и отдаётся ассистентам явно (AGENTS.md, context7.json, llms.txt).
+1. **Фича — потребитель core.** Что не нужно каждому адаптеру в веб-запросе — отдельный пакет с сохранением FQCN
+   через PSR-4. Core не импортирует `Symfony\Component\Console\` и `PHPUnit\`; `symfony/http-client` остаётся
+   опциональной целью дискавери в `Psr18Transport` (это транспорт, не фича).
+2. **Машиночитаемо по умолчанию.** Структурный вывод у диагностики, схема у конфига, README-раздел для ассистентов.
 3. **Честно.** IndexNow — уведомление, не индексация; Google не участвует; где смотреть результат — сказано.
-4. **Безопасно по умолчанию.** Непроизводственное окружение не отправляет; `check` видит всё, что может навредить.
+4. **Безопасно по умолчанию.** Непроизводственное окружение не отправляет по ошибке; `check` видит всё, что вредит.
+5. **Что разрешено патчем/минором по `bc.md` — делается сразу**, не ждёт большой волны.
 
-Волны:
+Волны и версии:
 
-| Волна | Релизы | Содержание | Риск |
-|---|---|---|---|
-| 0 | патчи README/доков адаптеров, без core | §2 гигиена, документация, AI-артефакты, docs-сайт | нулевой |
-| D | core 0.6.0 + все адаптеры + testing 0.1.0 + console 0.1.0 | §3 состав: пакеты `testing`, `console`, `Adapter\OptionalPackage`; мелкие правки протокола | низкий (механика) |
-| E | core 0.7.0 + все адаптеры | §4 эксплуатация и SEO: `check`, ротация, стейджинг, `SubmissionStoreInterface`, канонизация, DSL, тексты | средний |
-| F | history 0.1.0, verify 0.1.0 | §5 новые опциональные пакеты | низкий, изолирован |
-| — | core 0.8 → 1.0 | §6 политики, критерии 1.0, Yii3 как второй потребитель `Services` | — |
+| Волна | core | Содержание | Срок | Риск |
+|---|---|---|---|---|
+| 0a + hotfix | **0.6.0** | §2: стейджинг-проверка, дефект дебаунса, `PREVIOUS_KEY`, два `Engine`, тексты ошибок, `DebounceStoreCheck` в бандле, README-дефекты, гигиена GitHub/Packagist | дни | низкий |
+| 0b | — | §3: документация, AI-артефакты, docs-сайт, RU, паритет Yii2 | недели, параллельно с D/E | нулевой |
+| D | **0.7.0** | §4: пакеты `testing`, `console`; `Adapter\OptionalPackage`; перемещения | дни | низкий (механика) |
+| E | **0.8.0** | §5: `check --json/--strict` и новые проверки, ротация, счётчик 403, `SubmissionStoreInterface`, канонизация, `Condition`, `config --json` | 1–2 недели | средний |
+| F | — | §6: `verify` 0.1.0, затем `history` 0.1.0 | после E | изолирован |
+| 1.0 | 0.9 → 1.0 | §7: один минор без breaking, критерии выполнены | — | — |
 
 ## 1. Целевая карта пакетов
 
 ```
 L0  indexnowkit/core        протокол, модель правил, адаптерный кит, 4 тестовых двойника без PHPUnit
- ├─ L1 indexnowkit/console  раннеры CLI и Definitions            require: core, symfony/console ^6.4|^7|^8
- ├─ L1 indexnowkit/testing  conformance-киты и assertion-хелперы  require: core; suggest phpunit ^11
- ├─ L1 indexnowkit/sitemap  чтение sitemap                        require: core, ext-xmlreader; suggest console
- ├─ L1 indexnowkit/history  история отправок                      require: core; suggest console (волна F)
- └─ L1 indexnowkit/verify   pre-flight проверка URL               require: core (волна F)
-L2  indexnowkit/doctrine    require: core (+ doctrine); dev: testing
-    indexnowkit/{symfony-bundle,laravel,yii2,yii3,bitrix}  require: core, console; suggest: sitemap, history, verify; dev: testing
+ ├─ L1 indexnowkit/console  раннеры CLI и Definitions             require: core, symfony/console ^6.4|^7|^8
+ ├─ L1 indexnowkit/testing  conformance-киты и assertion-хелперы   require: core; suggest phpunit ^11
+ ├─ L1 indexnowkit/sitemap  чтение sitemap + команда               require: core, console, ext-xmlreader
+ ├─ L1 indexnowkit/verify   pre-flight проверка URL, check --sample require: core; suggest console      (волна F)
+ └─ L1 indexnowkit/history  история отправок                       require: core; suggest console      (волна F)
+L2  indexnowkit/doctrine    require: core; dev: testing
+    indexnowkit/{symfony-bundle,laravel,yii2,yii3,bitrix}  require: core, console; suggest: sitemap, verify, history; dev: testing
 ```
 
-Вердикты по составу core (детали и цифры — в отчёте линзы; здесь решения):
+Решения по составу core:
 
 | Кандидат | Строк | Решение | Основание |
 |---|---:|---|---|
-| `Console\*` кроме `SubmitterFactory*`, `ResultSummary` | ~1075 | **вынести** → `indexnowkit/console`, FQCN сохраняются | 8 файлов импортируют `symfony/console`, который в `suggest`; doctrine — единственный адаптер без CLI |
+| `Console\*` кроме `SubmitterFactory*`, `ResultSummary` | ~1075 | **вынести** → `indexnowkit/console`, FQCN сохраняются | core продаётся как framework-agnostic; `require symfony/console` в core тянул бы 4–6 пакетов и матрицу трёх мажоров Symfony в plain-PHP и doctrine (ноль упоминаний `Console\`). Рассмотрено и отклонено: `symfony/console` в `require` core; оставить в core `Definitions`/`Vocabulary`/`ExitCode` (используются только внутри `Console\`) |
 | `Console\SubmitterFactory`, `SubmitterFactoryInterface` | 71 | **переместить** → `Adapter\` | зовутся из `Adapter\Services`; слой 2 не должен знать про CLI |
-| `Console\ResultSummary` | 64 | **переместить** → `IndexNowKit\ResultSummary` | общий для любых многобатчевых прогонов |
-| `Testing\Conformance\*`, `KeyFileAssertions`, `CheckOutputAssertions` | 760 | **вынести** → `indexnowkit/testing` под префиксом `IndexNowKit\Testing\Conformance\` (хелперы переименовываются в этот namespace) | расширяют PHPUnit из `suggest`; ноль потребителей в `src`; `OrmConformanceTestCase` — 453 строки в прод-vendor |
+| `Console\ResultSummary` | 64 | **переместить** → `IndexNowKit\Submission\ResultSummary` | агрегат отправок, не протокол; `Submission\` в волне E получает `SubmissionStoreInterface` |
+| `Testing\Conformance\*`, `KeyFileAssertions`, `CheckOutputAssertions` | 760 | **вынести** → `indexnowkit/testing`; хелперы → `Testing\Conformance\{KeyFileAssertions, CheckOutputAssertions}` | расширяют PHPUnit из `suggest`; ноль потребителей в `src`; `OrmConformanceTestCase` 453 строки в прод-vendor. Хелперы сегодня в тире Call — в CHANGELOG это «изъятие из стабильного API до 1.0», не «одна строка `use`» |
 | `Testing\{FakeTransport, ArrayLogger, FrozenClock, RecordingDispatcher}` | 212 | оставить | реализации интерфейсов core без PHPUnit; спека 10 обещает их в основном пакете |
-| `Adapter\Services`/`ServicesBuilder` | 528 | оставить до Yii3; если Yii3 не станет вторым потребителем — вернуть в yii2 к 0.8 | один потребитель |
-| `Check\*`, `Transaction\*`, `Key\*`, `Retry\*`, `Url\Punycode`, `Attribute\Param\*`, `Hook\*` | — | оставить | ноль внешних зависимостей, реальные потребители или протокольный шов |
-| `Adapter\OptionalPackage` | +40 | **добавить** в core | три копии `SitemapSupport`/предиката в адаптерах |
-| `SitemapConfig::loadOrDisabled()` | +25 | **добавить** в sitemap | три копии «невалидный блок → critical → disabled» |
+| `Adapter\Services`/`ServicesBuilder` | 528 | оставить до Yii3; критерий — форма, не факт использования: Yii3 обходится **без новых методов** `ServicesBuilder`; потребовалось расширение — код возвращается в yii2 к 0.9 | один потребитель |
+| `Transaction\VerifyingStaging` | 155 | тот же критерий с Yii3; иначе → yii2 | один потребитель |
+| `Check\*`, `Transaction\*` (остальное), `Key\*`, `Retry\*`, `Url\Punycode`, `Attribute\Param\*`, `Hook\*` | — | оставить | ноль внешних зависимостей, реальные потребители или протокольный шов |
+| `Adapter\OptionalPackage` | +40 | **добавить** в core | две копии `SitemapSupport` (laravel, yii2) + предикат в бандле |
+| `SitemapConfig::loadOrDisabled()` | +25 | **добавить** в sitemap | две копии «невалидный блок → critical → disabled» (laravel, yii2); бандл не использует: у DI-фабрики нет логгера в момент вызова, невалидный блок падает при сборке контейнера — так и остаётся |
 
-Зависимости core остаются как есть (`php-http/discovery`, `psr/*` обязательны). Из `suggest` уходят `symfony/console` и
-`phpunit/phpunit`. Не дробить: `Check`, `Key`, `Transaction`, `Attribute\Param`, по слоям «protocol/rules» — контрпримеры
+Core после волны D: ~106 файлов, ~8.3k строк. Зависимости core (`php-http/discovery`, `psr/*`) обязательны и остаются;
+из `suggest` уходят `symfony/console` и `phpunit/phpunit` (`phpunit` остаётся в `require-dev` — у core свои тесты).
+`sitemap` требует `console` (его `SitemapRunner` импортирует шесть классов console); `symfony/console` уходит из
+`suggest` sitemap. Не дробить `Check`, `Key`, `Transaction`, `Attribute\Param`, по слоям «protocol/rules» — контрпримеры
 в отчёте линзы, решение окончательное.
 
-## 2. Волна 0: гигиена, документация, AI-артефакты (без изменения кода core)
+## 2. Волна 0a + hotfix (core 0.6.0, адаптеры минорами)
 
-Каждый пункт — отдельный коммит или группа коммитов; адаптеры получают патч-релизы только ради README/AGENTS.md
-(файлы уходят в сплиты и на Packagist-страницы).
+Всё, что `bc.md` разрешает минором без breaking: рост `Engine`/`Reason`, аддитивные поля и параметры с дефолтом,
+тексты сообщений («not API»), новые строки диагностики. Делается первым, потому что содержит единственную находку с
+необратимыми последствиями.
 
-### 2.1. Packagist и GitHub
+### 2.1. Стейджинг с боевым ключом (`Check\Checker`)
 
-- **Витрина Packagist.** `repo.packagist.org/p2` актуален (Composer ставит верные версии), а `packagist.org/packages/*.json`
-  и веб-страницы core/doctrine/symfony-bundle отстают на 2–4 релиза. Действие пользователя: «Update» на трёх страницах.
-  Инструмент: `php/bin/packagist-check <pkg>` — сравнивает последний тег сплита, `p2` и `packages/*.json`, печатает
-  расхождение; вызывается в конце `bin/tag` (warning, не ошибка) и руками.
-- **GitHub topics** для `php-sitemap` (`indexnow sitemap seo php`), `php-laravel` (`indexnow laravel eloquent seo php`),
-  `php-yii2` (`indexnow yii2 activerecord seo php`); `homepage` у всех сплитов = монорепо (пока нет сайта — §2.4).
-- **`indexnowkit/spec`: LICENSE.** Спека — открытый эталон для портов: CC-BY-4.0 для текста (или MIT, если пользователь
-  предпочтёт единообразие). Решение пользователя, дефолт CC-BY-4.0.
-- **Read-only сплиты:** выключить Issues, Wiki, Projects на шести репо (`gh repo edit --enable-issues=false …`);
-  CONTRIBUTING уже отправляет в монорепо.
-- **`indexnowkit/.github`:** профиль организации (README: что это, таблица пакетов, ссылка на сайт),
-  `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), `SECURITY.md` по умолчанию, `ISSUE_TEMPLATE/` (bug: пакет, версия,
-  фреймворк, вывод `indexnow:check --json`, репродукция; feature), `PULL_REQUEST_TEMPLATE.md` (чеклист из CONTRIBUTING),
-  `FUNDING.yml` — не создаётся (решение: спонсорства нет; убрать упоминание из спеки 90).
-- **Монорепо `php/`:** `.github/dependabot.yml` (composer для шести пакетов, github-actions), `.github/workflows/codeql.yml`
-  (PHP, публичный репо — бесплатно), `CODE_OF_CONDUCT.md` (ссылка на org).
-- **composer.json:** `authors` в doctrine/symfony-bundle/laravel (как в core); `config.allow-plugins: {"php-http/discovery": false}`
-  во всех адаптерах; keywords `psr-18`, `psr-3` у адаптеров.
-- **Бейджи:** coverage (шаг CI генерирует `img.shields.io/badge/coverage-NN%25-…` в `php/README.md` и README core/sitemap
-  через коммит бота? — нет: статический бейдж обновляется скриптом `bin/coverage-floor --badge` в релизном коммите),
-  `phpstan level 9` (статический), license — во всех шести README, единый порядок.
-- **SECURITY.md:** одна фраза SLA во всех семи файлах: «acknowledged within 5 business days; fix or mitigation plan
-  within 30 days».
+`Config` получает `public readonly bool $dryRunExplicit` (заполняется в `fromArray()` из `array_key_exists('dry_run',
+$data)`, в `with()`/`withDryRun()` — `true`); `$dryRun` остаётся `bool` (смена типа = breaking для всех читателей).
+`Checker::run()` после проверки `dry_run`:
 
-### 2.2. README-дефекты (ведут AI и человека к ошибке)
+| Состояние | Строка |
+|---|---|
+| `environment === null` (plain PHP без `APP_ENV`/`INDEXNOW_ENV`) | ничего: судить не о чём |
+| не production, `enabled`, ключ есть, `dryRun === false`, `dryRunExplicit === false` | **error** `environment "staging" is not in production_environments but dry_run is off: changes WILL be sent to search engines under key ab12****. Set INDEXNOW_DRY_RUN=1 or INDEXNOW_ENABLED=0 outside production, or set dry_run: false explicitly if this environment submits on purpose.` |
+| то же, но `dryRunExplicit === true` | **warning** `... dry_run is explicitly false, assuming this environment submits on purpose.` |
+| всегда, когда `environment !== null` | ok/warning `environment: staging (not in production_environments: prod, production)` |
+
+Выход для preview-окружений — явный `dry_run: false`; `production_environments` для этого не используется (он управляет
+авто-dry_run и текстами, а не «кому можно слать»). Тест на четыре состояния.
+
+### 2.2. Прочий код hotfix
+
+- **Дефект дебаунса при нескольких движках** (`Submitter.php:74-83`): не маркировать URL, для которых есть retryable-результат:
+  `array_values(array_diff(Result::urlsWhere($results, isSuccess), Result::retryableUrls($results)))`. Перманентный отказ
+  (403/422) одного движка при успехе другого маркирует — ретраем не лечится, дебаунс не наказывает успешный движок.
+  `engines: ['api']`, dry_run, невалидные URL — поведение не меняется. Тесты `SubmitterTest` с частичным успехом.
+- `Config::fromEnv()` читает `INDEXNOW_PREVIOUS_KEY`; таблица env в `configuration.md`.
+- `Engine::InternetArchive = 'internetarchive'` (`https://internetarchive.indexnow.org/indexnow`), `Engine::Amazon = 'amazon'`
+  (`https://indexnow.amazonbot.amazon/indexnow`); источник — `https://api.indexnow.org/searchengines.json` (снимок
+  2026-09-05), список фиксируется в `docs/spec/01-protocol.md:8-22`. Хост Яндекса (`yandex.com` vs `www.yandex.com`) —
+  решение пользователя после реального запроса (§10).
+- **Тексты ошибок** (правило: факт + допустимое + как исправить): `Config.php:192` (resolver — два сообщения с
+  фактами), `:198` (key_prefix — расшифровать ограничение), `:214` (retry — пять отдельных проверок);
+  `Engine.php:61` (добавить «or an alias from engine_aliases»); `ClassNameResolver:46,49` (где искали; для чего нужен
+  класс); `ParamExtractor:88` (что допустимо), `:129` (перечислить перебранные имена); `ModelLoader:80`,
+  `ActiveRecordLoader:70` (какой базовый класс); yii2 `IndexNowObserver:229` (что делать); `Checker:128` (начало тела:
+  «a 200 answer with HTML usually means a catch-all route matched first»).
+- `Retry\RetryingSubmitter` docblock: путь для sync/CLI; очереди используют `WorkerOutcome`.
+- `DebounceStoreCheck` в бандле с probe над `Psr16Cache` (паритет с Laravel/Yii2).
+- `check` финал: после `IndexNow is ready.` — `Next: annotate a class with #[IndexNow(...)], or send one URL now:
+  {cli} {submit} https://…` (поля `Vocabulary::$cli/$submit` уже есть).
+
+### 2.3. README и документы (только тексты)
 
 | Файл | Дефект | Правка |
 |---|---|---|
-| `laravel/README.md:10`, `README.ru.md`, `CONTRIBUTING.md:12` | бейдж и текст «Laravel 11» при `^12 \|\| ^13` | «12 \| 13»; CONTRIBUTING «Laravel 12 and 13» |
+| `laravel/README.md:10`, `README.ru.md`, `CONTRIBUTING.md:12` | «Laravel 11» при `^12 \|\| ^13` | «12 \| 13» |
 | `laravel/README.md:86-92`, `README.ru.md:90` | сниппет без `use IndexNowKit\Attribute\{IndexNow, IndexNowDefaults, RuleSet}` | добавить импорты |
-| `yii2/README.md:22-41` | команды до конфигурации компонента (контроллер регистрируется в `bootstrap()`) | блоки местами; комментарий |
-| `laravel/README.md` рядом с фасадом | два класса с коротким именем `IndexNowKit` (ядро и фасад) | абзац «какой импорт когда»; алиас-методы `submitEntity`/`submitEntities` в `IndexNowManager` и `IndexNowComponent` (делегаты на `submitModel`/`submitRecord`) |
-| `core/README.md:211`, `symfony-bundle/docs/troubleshooting.md:47` | `serve_key_file` в пользовательских доках | убрать, оставить в CHANGELOG/bc |
-| `sitemap/README.md` | нет Google-абзаца в пакете с именем «sitemap» | абзац из core README + строка про `lastmod = now()` |
-| все README «Who gets notified» | нет Internet Archive и Amazon (endpoint'ы опубликованы) | список из `searchengines.json`; код — волна D |
+| `yii2/README.md:22-41` | команды до конфигурации компонента (контроллер регистрируется в `bootstrap()`) | блоки местами |
+| `laravel/README.md` у фасада | два класса с именем `IndexNowKit` | абзац «фасад `Laravel\Facades\IndexNowKit`; ядро `IndexNowKit\IndexNowKit` инжектится по типу». Алиасы `submitEntity` **не вводятся** (противоречат `Vocabulary`, замораживали бы 4 метода) |
+| `core/README.md:210` | `serve_key_file` в пользовательском README | убрать; в troubleshooting бандла оставить (пользователь ищет по старому ключу) |
+| `sitemap/README.md` | нет Google-абзаца | абзац из core README + строка про `lastmod = now()` |
+| все README «Who gets notified» | нет Internet Archive и Amazon | список из `searchengines.json` |
+| все README, шапка | нет пути к issues при выключенных Issues на сплитах | строка «Issues and pull requests: github.com/indexnowkit/php» рядом с «Русская версия» |
+| все README | нет «Why this over X» | раздел из спеки 90 (атрибут + дебаунс + post-commit + 429 backoff + общий core) |
+| `docs/bc.md` в doctrine, symfony-bundle, laravel, yii2 | нет | что стабильно: конфиг-ключи, команды, service id/binding'и/свойства; ссылка на тиры core |
+| §5.2/§5.3 SEO-тексты волны 0b, которые не требуют кода | — | «≠ индексация», BWT/Я.Вебмастер, 410/301/404, полный sitemap-прогон — можно и в 0a, если успевают |
 
-### 2.3. AI-артефакты
+### 2.4. GitHub и Packagist
 
-- **`AGENTS.md`** в корне монорепо (как работать с репо: bin/*, коммиты, где спека) и в каждом пакете (уходит в сплит):
-  имя на Packagist и минимальный `composer require`; сниппет «разметить сущность» с полными `use`; сниппет «отправить
-  URL»; полный список валидных ключей конфига (генерируется из `Config::OPTIONS` + `<Adapter>::OPTIONS` скриптом
-  `bin/agents-config-table`, чтобы не разъезжаться); команды с точными именами; **ловушки**: `dispatch: auto` есть в
-  Symfony/Yii2 и нет в Laravel; `router.locales` (Laravel) vs `router.languages` (Yii2); `url:` — имя аксессора, `urls:` —
-  литералы; строка в `when` truthy — нужен `Equals`; `submitEntity`/`submitModel`/`submitRecord`; фасад vs ядро в Laravel.
-  Тест `AgentsFileTest` в каждом пакете: файл существует, все упомянутые команды есть в `Definitions`, все ключи — в
-  `OPTIONS`.
-- **`context7.json`** в корне монорепо: `folders: ["php/packages/*/docs", "php/packages/*/README.md", "php/packages/*/AGENTS.md"]`,
-  `excludeFolders: ["**/vendor", "**/tests", "docs/plans", "docs/spec"]`, `rules` = те же ловушки.
-- **Laravel Boost:** `laravel/resources/boost/guidelines/core.blade.php` (30–50 строк) — официальная точка расширения
-  Boost для пакетов; содержимое = AGENTS.md пакета в формате Boost.
-- **`.phpstorm.meta.php`** в core: `expectedArguments` для `IndexNow::__construct` `locales` (`'current'`, `'all'`) и
-  `events` (`'created'`, `'updated'`, `'deleted'`).
-- **`llms.txt` / `llms-full.txt`** — генерируются docs-сайтом (§2.4).
-- **Doc-тесты:** `ReadmeQuickstartTest` в каждом адаптере прогоняет сниппеты README (разметка + первая отправка) через
-  `FakeTransport`; README становится контрактом, дефекты §2.2 не повторяются. Механика: сниппеты помечаются
-  `<!-- test: quickstart-model -->` … `<!-- /test -->`, тест извлекает их и `eval`-ит в песочнице теста.
+- **Витрина Packagist.** `repo.packagist.org/p2/indexnowkit/<pkg>.json` актуален (проверено 2026-09-05: core 0.5.1,
+  symfony-bundle 0.6.1), `packagist.org/packages/<pkg>.json` и страницы отстают. Пользователь нажимает «Update» на трёх
+  страницах. `php/bin/packagist-check <pkg>`: последний тег сплита vs `p2` vs `packages/*.json`, расхождение = warning;
+  вызывается в конце `bin/tag`.
+- **Topics**: `php-sitemap` (`indexnow sitemap seo php`), `php-laravel` (`indexnow laravel eloquent seo php`), `php-yii2`
+  (`indexnow yii2 activerecord seo php`); `homepage` у всех сплитов = монорепо (до сайта).
+- **`indexnowkit/spec`: LICENSE** — MIT (дефолт; спека содержит код, фикстуры и mock-сервер, которые копируются в
+  MIT-порты); вариант двойной лицензии CC-BY-4.0 текст + MIT код — решение пользователя (§10).
+- **Read-only сплиты:** выключить Issues, Wiki, Projects (`gh repo edit …`) — после строки в README (§2.3).
+- **Монорепо `php/`:** `.github/dependabot.yml` с `groups` по директории (composer ×6 + github-actions, недельно,
+  `open-pull-requests-limit: 3`); шаг `composer audit` в `ci.yml` для каждого пакета; `roave/security-advisories:
+  dev-latest` в `require-dev` каждого пакета; для `sitemap` (недоверенный XML) — scheduled-джоб Psalm
+  `--taint-analysis`. **CodeQL не поддерживает PHP — не использовать.**
+- **`indexnowkit/.github`** (низкий приоритет): README организации (что это, таблица пакетов), `CODE_OF_CONDUCT.md`
+  (Contributor Covenant 2.1). Issue/PR-шаблоны — в монорепо `php/.github/` (bug: пакет, версия, фреймворк, вывод
+  `indexnow:check --json`, репродукция; feature; PR-чеклист из CONTRIBUTING). `FUNDING.yml` не создаётся; упоминание
+  спонсорства убрать из спеки 90.
+- **composer.json:** `authors` в doctrine/symfony-bundle/laravel; `config.allow-plugins: {"php-http/discovery": false}`
+  во всех адаптерах; keywords `psr-18`, `psr-3` у адаптеров.
+- **Бейджи** (единый порядок в шести README): version, downloads, CI, conformance, **`coverage ≥ NN% enforced`**
+  (статический, NN = floor из `tests/coverage-floor.txt`, меняется с floor'ом), `phpstan level 9`, PHP, фреймворк,
+  license. Живой процент через Codecov — решение пользователя (§10).
+- **SECURITY.md** ×7: «acknowledged within 5 business days; fix or mitigation plan within 30 days».
+- **Flex.** Private recipe endpoint — **не** «автоустановка»: требует сгенерированного `index.json` + `vendor.package.
+  version.json`, URL вида `api.github.com/repos/…/contents/index.json` и ручного opt-in в composer.json пользователя.
+  Не делать; ручная установка остаётся в README; PR в `recipes-contrib` — после трекшна и решения по trademark (§7).
 
-### 2.4. Docs-сайт
+### 2.5. Релизы волны 0a
 
-MkDocs Material из монорепо на GitHub Pages (`indexnowkit.github.io/php`), workflow `docs.yml`: собирает
-`php/packages/*/README.md` + `php/packages/*/docs/*.md` (без правок файлов: `mkdocs-monorepo-plugin` или копирование
-скриптом), навигация: Getting started (Symfony / Laravel / Yii2 / plain PHP) → Attribute reference → Configuration
-(с таблицей соответствия ключей §2.7) → Operations (prod checklist первым) → Testing → Adapters (для авторов) →
-Packages. Поиск из коробки. Генерация `llms.txt` (оглавление со ссылками) и `llms-full.txt` (конкатенация) в корень
-сайта. `homepage` в composer.json и на GitHub → сайт. Домен `indexnowkit.dev` — решение пользователя, не блокер:
-Pages переезжает на домен одной настройкой.
+`core@0.6.0` → `symfony-bundle@0.7.0` → `laravel@0.8.0` → `yii2@0.6.0` → `doctrine@0.4.0` (только `core ^0.6`) →
+`sitemap@0.2.0` (`core ^0.6`). Гейт: тест четырёх состояний стейджинга; тест дебаунса; `check` в staging-конфиге
+адаптера с ключом даёт exit 1.
 
-### 2.5. SEO-честность и SEO-рекомендации в документации
+## 3. Волна 0b: документация, AI-артефакты, docs-сайт (параллельно, без релизов кода)
 
-- **«IndexNow ≠ индексация».** Абзац в шести README после «Who gets notified» и в `operations.md`: 200/202 = «уведомление
-  принято»; решение о краулинге и индексации принимает движок (качество, robots.txt, `noindex`, canonical, лимиты);
-  библиотека знает, дошло ли уведомление, и не знает, попадёт ли страница в индекс.
-- **Где смотреть результат:** Bing Webmaster Tools → IndexNow / IndexNow Insights (категории «robots disallowed»,
-  «content quality», «deadlinks»), Яндекс.Вебмастер → Индексирование → Переобход страниц. Метрика успеха — доля
-  отправленных URL в индексе за N дней, читается только там. Раздел в `operations.md`, ссылка из README.
-- **Что сайт должен отдавать на удалённом URL** (`operations.md`, новый раздел; три строки в README у «Deletion
-  semantics»): 410 для удалённых навсегда, 301 + отправка обоих URL для замен, 404 для временно снятых; soft-404 и
-  «мягкое удаление с редиректом на главную» — вред.
-- **Чего слать нельзя** (`operations.md` + `attribute-reference.md` «Anti-patterns»): `noindex`/`X-Robots-Tag`,
-  закрытые robots.txt, неканонические URL (`utm_*`, параметры, пагинация, фасеты), 3xx/4xx/5xx, черновики. Что уже
-  защищает библиотека (`when`, `strict_hosts`, нормализатор) и что даст волна E/F (`CanonicalUrlNormalizer`,
-  выборочная проверка в `check`, пакет `verify`).
-- **Sitemap:** в README пакета и `docs/sitemap.md` адаптеров — полный прогон без `--changed-since` разовый (миграция,
-  первый запуск); по расписанию только инкрементально (Bing: «streaming URLs as they change», batch mode); описание
-  `--force` дополнить «снимает дебаунс — не для регулярных заданий»; строка про недостоверный `lastmod`.
-- **Bing Webmaster URL Submission API и Google Indexing API — другое** (два предложения в README core): другой ключ,
-  суточная квота 10 000/день против 10 000/запрос у IndexNow; Google — только `JobPosting`/`BroadcastEvent`.
-- **hreflang-кластер:** пример с `via:` для переотправки языковых версий (`multi-domain.md`).
-- **`batch.max_urls = 10000`** — потолок протокола, не цель (`configuration.md`).
+### 3.1. Что доезжает до AI-ассистента потребителя
 
-### 2.6. Эксплуатационная документация
+| Канал | Доезжает | Решение |
+|---|---|---|
+| `AGENTS.md` в vendor-пакете | нет (агенты читают корень рабочего репо, `vendor/` исключён; Packagist рендерит README) | **один** `AGENTS.md` в корне монорепо для контрибьюторов (bin/*, коммиты, спека, гейты) |
+| README пакета | да (Packagist, поиск, индексаторы) | раздел `## Notes for AI assistants` (~15 строк) в README каждого пакета: имя пакета, минимальный сниппет с полными `use`, команда проверки, **ловушки**: `dispatch: auto` есть в Symfony/Yii2 и нет в Laravel; `router.locales` (Laravel) vs `router.languages` (Yii2); `url:` — имя аксессора, `urls:` — литералы; строка в `when` truthy — нужен `Equals`; `submitEntity`/`submitModel`/`submitRecord`; фасад vs ядро |
+| Laravel Boost | да | `laravel/resources/boost/guidelines/core.blade.php` — **ровно один файл**, 30–50 строк, содержимое = README-раздел в формате Boost |
+| `.phpstorm.meta.php` в core | да (PhpStorm сканирует vendor) | `expectedArguments` для `IndexNow::__construct` `locales` (`current`, `all`), `events` (`created`, `updated`, `deleted`) |
+| `context7.json` | только после submit репозитория в Context7 | файл в корне (`folders`, `excludeFolders: vendor, tests, docs/plans, docs/spec`, `rules` = ловушки) + шаг «submit `indexnowkit/php` на context7.com» |
+| docs-сайт + `llms.txt`/`llms-full.txt` | да | §3.2 |
 
-- **Prod checklist** — первый раздел `core/docs/operations.md`, ссылки из трёх README: ключ и base_url заданы,
-  `check --strict` зелёный; `strict_hosts: true` при нескольких хостах; `debounce.store` — общий кэш; dispatch — очередь с
-  воркером под мониторингом; стейджинг: `INDEXNOW_DRY_RUN=1` или `INDEXNOW_ENABLED=0` и `key_file.enabled: false`;
-  алерты на «consecutive failures», «collected URL(s) discarded», «invalid configuration»; `check --strict` в деплое;
-  `key_file.cache_max_age <= 300` и CDN его не переопределяет; после ротации `previous_key` снят через сутки.
-- **Сценарий «отправились URL стейджинга»** в troubleshooting трёх адаптеров: как заметить, как остановить, что делать.
-- **Сценарий «дубли / слишком часто»** (`debounce.store: memory` при нескольких воркерах) — там же.
-- **Эскалация 403 per-process:** в `operations.md` оговорить, что счётчик живёт в процессе (PHP-FPM не досчитает);
-  код — волна E (счётчик в общем кэше).
-- **Ключ не уходит в query string** — одна фраза в SECURITY.md/operations.
-- **Готовые правила мониторинга:** четыре правила Prometheus/Loki-стиля и фильтр Sentry в `operations.md`.
-- **Yii2-паритет:** `configuration.md` (полная таблица ключей с дефолтами, как у Laravel), `testing.md` (транзакционная
-  семантика verify-on-commit), новый `multi-domain.md`, разделы 422/429/дубли в troubleshooting.
-- **www/apex** — абзац в `multi-domain.md` каждого адаптера.
-- **RU-перевод** трёх документов: `core/docs/attribute-reference.md`, `core/docs/configuration.md`,
-  `*/docs/troubleshooting.md` (`.ru.md` рядом). Решение пользователя по объёму; дефолт — эти три.
+Тесты: `ReadmeAiNotesTest` в каждом адаптере — раздел существует, упомянутые команды есть в `Definitions`, ключи — в
+`OPTIONS`/дереве бандла. `ReadmeQuickstartTest`: канонический сниппет — **файл** `tests/Readme/QuickstartModel.php`
+(компилируется, phpstan, IDE-рефакторинг), тест (а) утверждает, что README содержит его текст дословно (golden),
+(б) прогоняет фикстуру через `FakeTransport` в поднятом приложении. Никакого `eval`.
 
-### 2.7. Таблица соответствия ключей адаптеров
+`bin/config-table`: генерирует таблицу «ключ × дефолт × Symfony/Laravel/Yii2» из `Config::OPTIONS`,
+`Sitemap\SitemapConfig::OPTIONS`, `Laravel\Config\ConfigFactory::LARAVEL_OPTIONS`, `Yii2\Config\ConfigFactory::YII_OPTIONS`
+и обхода `IndexNowKitConfiguration::getConfigTreeBuilder()`; результат — `core/docs/configuration.md` (раздел
+«One concept, three keys») и сайт; тест сравнивает файл с генерацией.
 
-В `core/docs/configuration.md` (и на сайте): одно понятие — три ключа (локали: `framework.enabled_locales` /
-`router.locales` / `router.languages`; параметр локали; очередь: `messenger.transport` / `queue.connection` /
-`queue.component`; хук ORM: `doctrine.*` / `eloquent.enabled` / `active_record.enabled`; `dispatch: auto` — где есть).
-Код: Yii2 принимает `router.locales`, `router.locale_parameter`, `router.set_app_locale` как синонимы своих
-`languages`-ключей (волна D, вместе с релизом yii2); старые остаются.
+### 3.2. Docs-сайт
 
-## 3. Волна D: состав core (core 0.6.0)
+MkDocs Material на GitHub Pages (`indexnowkit.github.io/php`), workflow `docs.yml`. Сборка скриптом `bin/docs-collect`
+(не `mkdocs-monorepo-plugin` — он не переписывает ссылки): README пакета → `index.md` раздела с переписыванием
+`](docs/x.md)` → `](x.md)`; абсолютные `github.com/indexnowkit/php/blob/main/packages/<pkg>/docs/<f>.md` →
+внутрисайтовые; полный `nav` генерируется. `mkdocs build --strict` в CI; внешние ссылки — `lychee`. Разделы: Getting
+started (Symfony / Laravel / Yii2 / plain PHP) → Attribute reference → Configuration (таблица ключей) → Operations
+(prod checklist первым) → Testing → Adapters → Packages → Compatibility. `llms.txt` (оглавление) и `llms-full.txt`
+(конкатенация) в корне сайта. `homepage` в composer.json и на GitHub → сайт. Домен — решение пользователя (§10).
 
-### 3.1. Пакет `indexnowkit/testing` 0.1.0
+### 3.3. SEO-честность и SEO-рекомендации
 
-- `packages/testing`, autoload `IndexNowKit\Testing\Conformance\` → `src/`. Переезжают `CoreConformanceTestCase`,
-  `OrmConformanceTestCase` (FQCN без изменений) и `KeyFileAssertions`, `CheckOutputAssertions` →
-  `IndexNowKit\Testing\Conformance\{KeyFileAssertions, CheckOutputAssertions}` (переименование — breaking, миграция:
-  один `use`). Mock-server роутер core (`tests/Support/mock-server`) копируется в `testing/resources/mock-server/` и
-  документируется как «клонировать не нужно: `vendor/indexnowkit/testing/resources/mock-server/router.php`».
-- `composer.json`: `require: php ^8.2, indexnowkit/core ^0.6`; `require-dev`/`suggest: phpunit/phpunit ^11`; в `src/`
-  разрешён импорт PHPUnit (это его назначение).
-- Адаптеры: `require-dev: indexnowkit/testing ^0.1`; `core/composer.json` без `phpunit` в `suggest`; core/docs/testing.md
-  и adapters.md ссылаются на пакет.
+- «IndexNow ≠ индексация» — абзац в шести README после «Who gets notified» и в `operations.md`.
+- Где смотреть результат: Bing Webmaster Tools → IndexNow Insights; Яндекс.Вебмастер → Переобход страниц; метрика
+  успеха — доля отправленных URL в индексе за N дней.
+- «Deleted pages: what your site must return» в `operations.md` + три строки в README: 410 навсегда, 301 + оба URL для
+  замен, 404 временно; soft-404 и редирект на главную — вред.
+- «What not to submit» (`operations.md`, `attribute-reference.md` «Anti-patterns»): `noindex`/`X-Robots-Tag`, robots.txt,
+  неканонические URL, 3xx/4xx/5xx, черновики; что защищает сейчас и что даст `verify`.
+- Sitemap: полный прогон без `--changed-since` — разовый; описание `--force` дополнить; строка про `lastmod`; код (warning
+  в рантайме при > `batch.max_urls` URL без `--changed-since`) — волна E.
+- Bing URL Submission API и Google Indexing API — «другое» (два предложения в README core).
+- hreflang-кластер через `via:` (`multi-domain.md`); `batch.max_urls` — потолок, не цель.
 
-### 3.2. Пакет `indexnowkit/console` 0.1.0
+### 3.4. Эксплуатационная документация
 
-- `packages/console`, autoload `IndexNowKit\Console\` → `src/`. Переезжают 16 файлов: раннеры, `ResultRenderer`,
-  `ResultFormatterInterface`, `CommandDefinition`, `ArgumentDefinition`, `OptionDefinition`, `Definitions`, `Vocabulary`,
-  `ExitCode`, `ClassNameResolver`, `SubjectLoaderInterface`, `SubmitSubjectsOptions`. FQCN сохраняются.
-- До переноса в core: `Console\SubmitterFactory`, `SubmitterFactoryInterface` → `Adapter\SubmitterFactory`,
-  `Adapter\SubmitterFactoryInterface`; `Console\ResultSummary` → `IndexNowKit\ResultSummary` (breaking, миграция —
-  `use`). `Adapter\Services::submitterFactory()` возвращает `Adapter\SubmitterFactoryInterface`.
-- `composer.json`: `require: php ^8.2, indexnowkit/core ^0.6, symfony/console ^6.4 || ^7.0 || ^8.0`.
-- Адаптеры symfony-bundle, laravel, yii2 и sitemap: `require: indexnowkit/console ^0.1`; doctrine не меняется (кроме
-  `core ^0.6`). core: `symfony/console` уходит из `suggest` и `require-dev`; `bc.md` тиры для `Console\*` переезжают в
-  `console/docs/bc.md`.
-- Гейт: `grep -rl 'Symfony\\\|PHPUnit\\' packages/core/src` пуст.
+Prod checklist — первый раздел `operations.md` со ссылками из README (ключ и base_url; `check --strict` зелёный;
+`strict_hosts`; общий `debounce.store`; очередь под мониторингом; стейджинг: `INDEXNOW_DRY_RUN=1`/`ENABLED=0` и
+`key_file.enabled: false`; алерты на три строки; `check --strict` в деплое; `cache_max_age <= 300` и CDN; `previous_key`
+снят после ротации). Сценарии «отправились URL стейджинга», «дубли при `memory` и нескольких воркерах» в troubleshooting
+трёх адаптеров. Оговорка про эскалацию 403 per-process (до волны E). «Ключ не уходит в query string». Четыре правила
+мониторинга + фильтр Sentry. Yii2-паритет: `configuration.md` (полная таблица), `testing.md` (verify-on-commit), новый
+`multi-domain.md`, 422/429/дубли в troubleshooting. www/apex — абзац в `multi-domain.md` каждого адаптера. RU-перевод:
+`attribute-reference.md`, `configuration.md`, `*/docs/troubleshooting.md` (объём — решение пользователя, §10).
+`core/docs/testing.md`: mock-server теперь в пакете `testing` (после волны D).
 
-### 3.3. `Adapter\OptionalPackage` (core) и `SitemapConfig::loadOrDisabled()` (sitemap 0.2.0)
+## 4. Волна D: состав core (core 0.7.0)
+
+### 4.1. Пакет `indexnowkit/testing` 0.1.0
+
+- `packages/testing`, autoload `IndexNowKit\Testing\Conformance\` → `src/` (точный непересекающийся префикс; Composer берёт
+  самый длинный совпавший — предупреждений нет). Переезжают `CoreConformanceTestCase`, `OrmConformanceTestCase` (FQCN без
+  изменений), `KeyFileAssertions`, `CheckOutputAssertions` → `IndexNowKit\Testing\Conformance\{…}`.
+- Mock-server роутер core (`tests/Support/mock-server`) → `testing/resources/mock-server/` (документируется путь в vendor).
+- Тесты core, использующие переехавшее (`core/tests/Unit/Testing/AssertionsTest.php`, conformance-прогоны core через
+  кит), переезжают в `testing/tests` (пакет требует core — цикла нет); `core/tests/Unit/Adapter/TwentyMinuteAdapterTest.php:142`
+  переходит на локальную ассерцию. **Core не получает `require-dev: indexnowkit/testing`** (иначе бутстрап-цикл: сплит
+  core с алиасом `0.6.x-dev` не удовлетворит `^0.7` до тега).
+- `composer.json`: `require: php ^8.2, indexnowkit/core ^0.7`; `require-dev`/`suggest: phpunit/phpunit ^11`;
+  **`extra.branch-alias.dev-main: 0.1.x-dev` обязателен** — `bin/link.php:41-45` падает без него и валит весь CI;
+  `minimum-stability dev + prefer-stable`, scripts `ci:install:*`, `.github/workflows/ci.yml`, SECURITY, CHANGELOG, README EN/RU.
+- Адаптеры: `require-dev: indexnowkit/testing ^0.1`; core: `phpunit` уходит из `suggest`, остаётся в `require-dev`.
+
+### 4.2. Пакет `indexnowkit/console` 0.1.0
+
+- `packages/console`, autoload `IndexNowKit\Console\` → `src/`; 16 файлов: `CheckRunner`, `ExplainRunner`,
+  `KeyGenerateRunner`, `SubmitRunner`, `SubmitSubjectsRunner`, `ResultRenderer`, `ResultFormatterInterface`,
+  `CommandDefinition`, `ArgumentDefinition`, `OptionDefinition`, `Definitions`, `Vocabulary`, `ExitCode`,
+  `ClassNameResolver`, `SubjectLoaderInterface`, `SubmitSubjectsOptions`. FQCN сохраняются.
+- До переноса в core: `Console\SubmitterFactory`, `SubmitterFactoryInterface` → `Adapter\`; `Console\ResultSummary` →
+  `Submission\ResultSummary` (breaking, миграция — `use`). `Adapter\Services::submitterFactory()` возвращает
+  `Adapter\SubmitterFactoryInterface`. После этого `Console\` вне `Console/` в core не встречается (проверено: только
+  `Adapter/Services.php:19-20` и два комментария).
+- `composer.json`: `require: php ^8.2, indexnowkit/core ^0.7, symfony/console ^6.4 || ^7.0 || ^8.0`; `branch-alias 0.1.x-dev`.
+- Адаптеры symfony-bundle, laravel, yii2 и sitemap: `require: indexnowkit/console ^0.1`; doctrine — только `core ^0.7`.
+  core: `symfony/console` уходит из `suggest` и `require-dev`; sitemap: из `suggest`. Тиры `Console\*` → `console/docs/bc.md`.
+- Гейт: `grep -rl 'Symfony\\Component\\Console\|PHPUnit\\' packages/core/src packages/sitemap/src` пуст.
+
+### 4.3. `Adapter\OptionalPackage` и `SitemapConfig::loadOrDisabled()` (sitemap 0.3.0)
 
 ```php
 namespace IndexNowKit\Adapter;
 
 final class OptionalPackage
 {
-    /** @param class-string $marker класс, существование которого означает «пакет установлен»; тест переопределяет через $installed */
-    public function __construct(public readonly string $package, public readonly string $marker, public readonly string $feature) {}
-    /** @internal для тестов */ public static array $installed = [];   // package => bool
+    /**
+     * @param class-string $marker   класс, существование которого означает «пакет установлен»
+     * @param ?bool        $installed переопределение (тесты, compile-time бандла); null = class_exists($marker)
+     */
+    public function __construct(public readonly string $package, public readonly string $marker, public readonly string $feature, private readonly ?bool $installed = null) {}
     public function installed(): bool;
-    public function notInstalledMessage(): string;                     // 'indexnowkit/sitemap is not installed: composer require indexnowkit/sitemap'
+    public function notInstalledMessage(): string;   // 'indexnowkit/sitemap is not installed: composer require indexnowkit/sitemap'
     /** @param array<string,mixed> $block @param array<string,mixed> $defaults */
-    public function checkLine(array $block, array $defaults): string; // 'sitemap: not installed (...)' | '... the sitemap block in the configuration is ignored (...)'
-    public function check(array $block, array $defaults): Check\StaticCheck;
+    public function checkLine(array $block, array $defaults = []): string;
+    /** уровень: ok — не установлен и блок пуст/дефолтный; warning — блок настроен, но игнорируется */
+    public function check(array $block, array $defaults = []): Check\StaticCheck;
 }
 ```
 
-`SitemapConfig::loadOrDisabled(array $block, LoggerInterface $logger, string $checkCommand): SitemapConfig` — «невалидный
-блок → critical `indexnow: invalid sitemap configuration, the sitemap command is disabled until it is fixed: {error}
-(run "{check}")` → `disabled()`». Три `SitemapSupport`/`SitemapServices` адаптеров сводятся к этим двум вызовам.
+Никакой статики. Переопределение приходит из адаптера: бандл — существующие параметры `IndexNowKitLoader`/
+`IndexNowKitConfiguration` (`?bool $sitemapInstalled`); Laravel — тесты биндят экземпляр в контейнер до `boot()`
+(`$app->instance(SitemapPackage::class, …)`), провайдер берёт из контейнера, если есть; Yii2 — свойство компонента
+`sitemapInstalled: ?bool`. Классы `SitemapSupport` удаляются; `yii2/tests/Feature/SitemapNotInstalledTest.php:70`
+переходит на `checkLine([], [])`. `SitemapConfig::loadOrDisabled(array $block, LoggerInterface $logger, string
+$checkCommand): SitemapConfig` заменяет копии в laravel/yii2 (унифицирует текст с `(run "{check}")`); бандл не трогается.
 
-### 3.4. Мелкие правки core, едущие в 0.6.0
+### 4.4. Релизы и инфраструктура волны D
 
-- **Дефект дебаунса при нескольких движках** (`Submitter.php:75`): маркировать только URL, у которых все endpoint'ы
-  ответили успешно — `array_diff(urlsWhere(isSuccess), Result::retryableUrls($results))`; тест: `engines: ['api','yandex']`,
-  200 + 503 → URL не в дебаунсе, ретрай доходит до второго движка.
-- `Engine::InternetArchive = 'internetarchive'` (`https://internetarchive.indexnow.org/indexnow`), `Engine::Amazon =
-  'amazon'` (`https://indexnow.amazonbot.amazon/indexnow`); один реальный запрос-проверка `yandex.com` vs
-  `www.yandex.com` (редирект на POST теряет тело у части клиентов) — по результату поправить `Engine::Yandex`;
-  `docs/spec/01-protocol.md:8-22` обновить.
-- `Config::fromEnv()` читает `INDEXNOW_PREVIOUS_KEY`; таблица env в `configuration.md`.
-- `Retry\RetryingSubmitter` docblock: «путь для sync/CLI; очереди используют `WorkerOutcome`».
-- Yii2 синонимы ключей `router.locales*` (§2.7).
+Порядок: **регистрация `testing` и `console` на Packagist до первого пуша `main` адаптеров** (иначе `packagist-wait-main`
+получит 404 и адаптеры уйдут в сплиты с неразрешимой зависимостью): репо `php-testing`, `php-console`, deploy-keys,
+секреты `SPLIT_SSH_KEY_TESTING`/`SPLIT_SSH_KEY_CONSOLE`; `split.yml` стадии `core → {testing, console} → sitemap → адаптеры`;
+`tools-push-splits.sh:16-23` и `ci.yml:26,30-38` — списки пакетов; `php/README.md`. Гейт до первого тега: зелёный
+прогон всех адаптеров на `core@dev-main + console@dev-main + testing@dev-main` через `bin/link`. Два выноса — два
+ревертируемых коммита. Теги: `core@0.7.0` → `testing@0.1.0` → `console@0.1.0` → `sitemap@0.3.0` → `doctrine@0.5.0` →
+`symfony-bundle@0.8.0` → `laravel@0.9.0` → `yii2@0.7.0`.
 
-### 3.5. Релизы волны D
+## 5. Волна E: эксплуатация и SEO (core 0.8.0, console 0.2.0)
 
-`core@0.6.0` → `testing@0.1.0` → `console@0.1.0` → `sitemap@0.2.0` → `doctrine@0.4.0` → `symfony-bundle@0.7.0` →
-`laravel@0.8.0` → `yii2@0.6.0`. Новые репо `php-testing`, `php-console` (deploy-keys, секреты `SPLIT_SSH_KEY_TESTING`,
-`SPLIT_SSH_KEY_CONSOLE`, Packagist-регистрация); `split.yml` стадии: core → {testing, console, sitemap} → адаптеры;
-`packagist-wait-main` учитывает новые зависимости автоматически (читает composer.json). Матрица `ci.yml`, `php/README.md`,
-`tools-push-splits.sh`, `bin/release-notes` карта.
+### 5.1. `indexnow:check` как healthcheck
 
-## 4. Волна E: эксплуатация и SEO (core 0.7.0)
-
-### 4.1. `indexnow:check` как healthcheck и SEO-проверка
+Модель: `Check\CheckItem` получает `?string $code = null, ?string $host = null` (appended); `CheckReport::ok/warning/error(string
+$message, ?string $code = null, ?string $host = null)`; все проверки core и адаптеров получают стабильные `code`
+(`config.dry_run`, `environment.non_production_submits`, `key_file.status`, `key_file.content_type`, `debounce.store`, …) —
+`code` для `check` то же, что `Reason` для результатов: тексты не API, коды — API (перечень в `docs/check-codes.md`).
 
 | Изменение | Где | Суть |
 |---|---|---|
-| `--json` | `console` `Definitions::check()`, `CheckRunner` | `{"status":"ok\|warning\|error","environment":"prod","items":[{"level","message","host"?}],"hosts":{...}}`; без ANSI |
-| `--strict` | там же | предупреждения дают exit 1; для CI/деплоя |
-| `--host` многократный | там же | список хостов |
-| Строка окружения всегда | `Check\Checker` | `environment: staging (not in production_environments: prod, production)` — ok в проде, warning вне |
-| **Стейджинг с боевым ключом** | `Checker` после `dry_run` | `!isProduction && !dryRun && enabled` → **error**: «environment "staging" is not production but dry_run is off: changes WILL be sent to search engines under key ab12****. Set INDEXNOW_DRY_RUN=1 or INDEXNOW_ENABLED=0 outside production.» Уровень error (не warning): необратимые последствия |
-| `Content-Type` ключевого файла | `Http\Response` получает `headers: array<string,string>` (lowercase keys) + `contentType()`; `Psr18Transport::get()` заполняет | `text/plain` обязателен; иначе error с фактическим типом |
-| Фактический `Cache-Control`/`Age` | `Checker` | warning «CDN держит файл N с, ротация займёт N с», если `max-age` > `key_file.cache_max_age` |
-| Редиректы на ключевом файле при пользовательском `http.client` | `Checker` | `check` строит отдельный транспорт без редиректов через `TransportFactory::lazy` с `followRedirects: false` (новый параметр `Psr18Transport::discover`), либо предупреждает, что клиент пользователя следует редиректам |
-| robots.txt | `Checker` | GET `/robots.txt`, `Disallow`, совпадающий с путём ключевого файла → warning |
-| `previous_key` | `Checker::checkHost` | если задан: отдаётся ли `/{previous}.txt` (200 → ok «rotation window open; remove previous_key after check --live is green»), иначе warning |
-| Тело не совпало | текст | «got %d bytes starting with "%s"; a 200 answer with HTML usually means a catch-all route matched first» |
-| **Выборочная SEO-проверка URL** | `Checker` `--sample[=N]` (default 3) | берёт N URL, которые библиотека реально отправила бы (через `SubjectLoader` первого класса с правилами, `explain`), делает GET: статус, `<meta name=robots noindex>`, `X-Robots-Tag`, `<link rel=canonical>` ≠ URL, robots.txt; печатает по строке; выключено без `--sample`, чтобы `check` не ходил по сайту молча |
-| Следующий шаг | `CheckRunner` финал | после `IndexNow is ready.` — «Next: annotate a class with #[IndexNow(...)] or send one URL: <команда фреймворка> indexnow:submit https://…» (команда из `Vocabulary::checkCommand`-подобного поля) |
-| `DebounceStoreCheck` в бандле | symfony-bundle | зарегистрировать с probe над `Psr16Cache` (паритет с Laravel/Yii2) |
+| `--json` | console: `Definitions::check()`, `CheckRunner` | схема `docs/check.schema.json` в репо, тест-фикстура; `{"status":"ok\|warning\|error","environment":?string,"items":[{"level","code","message","host":?string}]}`; `hosts` отдельно не выделяется — группировка по `host` на стороне читателя; `--strict` влияет только на exit-код, не на `status` |
+| `--strict` | там же | предупреждения → exit 1 |
+| `--host` многократный | там же | список |
+| `Content-Type` | `Http\Response` получает `array<string,string> $headers = []` (lowercase) 4-м параметром + `contentType()`; `Psr18Transport::get()` **и** `download()` заполняют; `FakeTransport::onGet` не меняется (тесты передают `new Response(200, $key, headers: […])`) | error только если заголовок есть и не `text/plain`; заголовка нет (кастомный транспорт) → ok «Content-Type unknown (this transport does not expose headers)» |
+| `Cache-Control`/`Age` | `Checker` | warning, если `max-age` > `key_file.cache_max_age` («CDN держит файл N с, ротация займёт N с») |
+| Пользовательский `http.client` | `Checker` | warning «key file fetched through your http.client; if it follows redirects, a 30x to a catch-all page looks like a 200». Свой транспорт `check` уже без редиректов (`Psr18Transport::createClient`), нового параметра не нужно |
+| robots.txt | `Checker` | GET `/robots.txt`, `Disallow` на путь ключевого файла → warning |
+| `previous_key` | `Checker::checkHost` | из `Config::$previousKeys[$host] ?? $previousKey` (не через `KeyProviderInterface` — тир Implement); отдаётся ли `/{previous}.txt`: 200 → ok «rotation window open; remove previous_key once check --live is green», иначе warning. Контроль «через сутки» не обещается — времени установки нет |
+| `--sample` | **пакет `verify`** (§6.1), регистрируется как `CheckInterface` за `OptionalPackage`; без пакета — строка «sample: indexnowkit/verify is not installed» | core HTML не парсит |
 
-### 4.2. Ротация ключа
+### 5.2. Ротация ключа
 
-- `KeyGenerateRunner --force`: старое значение пишется в `INDEXNOW_PREVIOUS_KEY=` (создать/заменить строку), печатается
-  напоминание снять через сутки; `--no-previous` отключает.
-- `operations.md` «Key rotation» переписывается под новое поведение; `check` показывает окно ротации (§4.1).
+`KeyGenerateRunner --force`: старое значение → `INDEXNOW_PREVIOUS_KEY=`; если переменная **уже непуста** — отказ с текстом
+«INDEXNOW_PREVIOUS_KEY is still set from an earlier rotation; engines may still verify against it. Remove it first, or pass
+--no-previous to drop it, or --yes to overwrite» (защита от двойной ротации). `operations.md` «Key rotation» под новое поведение.
 
-### 4.3. Эскалация 403 между процессами
+### 5.3. Эскалация 403 между процессами
 
-`Client` считает подряд идущие 403 на хост в `DebounceStoreInterface`-подобном общем хранилище: новый интерфейс
-`Key\FailureCounterInterface { increment(string $host): int; reset(string $host): void }` с `MemoryFailureCounter`
-(как сейчас) и `Psr16FailureCounter`; адаптеры дают PSR-16 реализацию над тем же кэшем, что debounce. `Config`:
-без новых опций (`forbidden_escalation` уже есть). Документация: критическая строка теперь срабатывает и в PHP-FPM.
+Без нового интерфейса: `Client::__construct(..., ?CacheInterface $failureCache = null, int $failureCacheTtl = 3600)`
+(appended, тир Call). Счётчик `indexnow:403:{host}` с TTL; при наличии `increment()` у стора (Redis/Memcached через
+адаптерный PSR-16) — атомарно, иначе `get/set` с оговоркой «приблизительно». Эскалация — пересечение порога: critical,
+когда `count >= N` и флаг `indexnow:403:{host}:escalated` (TTL) не стоит; `reset()` только если счётчик ненулевой.
+`Checker::probe()` строит `Client` без кэша — live-probe счётчик не трогает. Адаптеры передают тот же PSR-16, что для
+debounce. Документация: критическая строка теперь срабатывает и в PHP-FPM.
 
-### 4.4. `Submission\SubmissionStoreInterface`
+### 5.4. `Submission\SubmissionStoreInterface`
 
 ```php
 namespace IndexNowKit\Submission;
 
 interface SubmissionStoreInterface
 {
+    /** одна запись на один Result (батч × endpoint); хранятся и skip-результаты */
     public function record(Result $result, \DateTimeImmutable $at): void;
-    /** @return iterable<SubmissionRecord> новые первыми */
+    /** @return iterable<SubmissionRecord> новые первыми; фильтры по host, статусу */
     public function recent(int $limit = 100, ?string $host = null, ?ResultStatus $status = null): iterable;
+    /** последняя по времени запись, чей `urls` содержит $url (любой статус) */
     public function lastFor(string $url): ?SubmissionRecord;
 }
-final readonly class SubmissionRecord { public function __construct(public string $url, public Result $result, public \DateTimeImmutable $at) {} }
+final readonly class SubmissionRecord { /** @param list<string> $urls */ public function __construct(public array $urls, public Result $result, public \DateTimeImmutable $at) {} }
 final class NullSubmissionStore implements SubmissionStoreInterface {}
 ```
 
-Подключение через существующий `Submitter::addListener()` — конвейер не меняется. Адаптеры получают точку
-переопределения (сервис/binding/свойство) с `NullSubmissionStore` по умолчанию. Реализации — пакет `history` (§5.1).
-Контракт фиксируется до 1.0.
+Подключение — не листенером (у него нет времени), а параметрами `Submitter::__construct(..., ?SubmissionStoreInterface
+$store = null, ?ClockInterface $clock = null)` (appended; `SystemClock` по умолчанию). Адаптеры дают точку переопределения
+с `NullSubmissionStore`. Таблица «состояние → записи»: один URL при `engines: ['api','yandex']` → две записи, `lastFor`
+возвращает позднейшую; `Result::NO_ENGINE` (dry_run/skip) — тоже запись. Индекс url→record — забота реализации (`history`).
 
-### 4.5. Канонизация URL
+### 5.5. Канонизация URL
 
-`Url\CanonicalUrlNormalizer implements UrlNormalizerInterface` — декоратор: срезает трекинг-параметры
-(`utm_*`, `gclid`, `fbclid`, `yclid`, `msclkid`, `_ga`, `mc_cid`, `mc_eid`; список расширяемый), политика trailing slash
-(`keep|add|strip`), сортировка query по ключу (опция). Конфиг: блок `normalizer` в `Config::OPTIONS` — `strip_tracking_params`
-(bool, default `false`), `trailing_slash` (`keep` default), `extra_tracking_params` (list). Адаптеры оборачивают
-`UrlNormalizer` при включённой опции (фабрика `UrlNormalizerFactory::fromConfig`). По умолчанию выключено: нормализатор
-не должен угадывать канонический вид; документация объясняет, когда включать.
+`Url\UrlNormalizerFactory::fromConfig(Config): UrlNormalizerInterface` в core **заменяет `new UrlNormalizer(...)` во всех
+пяти местах core** (`Submitter:42`, `Client:44`, `IndexNowKit:94`, `Adapter/Services:113`, `Checker:177`) и в
+`laravel/…ServiceProvider:160`; иначе опция молча не работала бы в plain PHP. `Url\CanonicalUrlNormalizer(UrlNormalizerInterface
+$inner, …)` — декоратор: сначала `inner->normalize()`, затем канонизация; применяется в `Submitter` **до** дедупликации и
+дебаунса. Блок `normalizer` в `Config::OPTIONS` точечно: `normalizer.strip_tracking_params` (bool, **default `true`** — члены
+списка добавляются внешними источниками трафика, роутинг их не генерирует, ложных срабатываний нет по построению),
+`normalizer.tracking_params` (list, дополняет), `normalizer.trailing_slash` (`keep` default | `add` | `strip` — может менять
+идентичность страницы), `normalizer.sort_query` (bool, default false). `CanonicalUrlNormalizer::TRACKING_PARAMS` — растущая
+константа (в `bc.md` рядом с правилом роста enum'ов): `utm_*`, `gclid`, `dclid`, `wbraid`, `gbraid`, `fbclid`, `msclkid`,
+`yclid`, `ysclid`, `_openstat`, `etext`, `ttclid`, `twclid`, `igshid`, `mc_cid`, `mc_eid`, `mkt_tok`, `_hsenc`, `_hsmi`, `_ga`.
 
-### 4.6. Модель правил: `Condition` против `ParamValue`
+### 5.6. Модель правил: `Condition`
 
-- Новый интерфейс `Attribute\Param\Condition` для `when`; `Equals` реализует только его; `ParamValue` остаётся
-  «закрытым множеством» из четырёх (docblock синхронизирован). `IndexNow::__construct(when: string|Condition|null)`;
-  `Equals` в `params` становится ошибкой типов (phpstan/IDE) и рантайм-ошибкой `ParamExtractor` с текстом из §4.7.
-  Breaking для тех, кто передавал `Equals` в `params` (это и был баг). Тир Implement: пользовательские `Condition`
-  разрешены (`evaluate(object $subject): bool`).
-- `ExplainRunner` печатает фактические значения: `when: status ("draft") -> true — a non-empty string is truthy; use
-  new Equals('status', 'published')`; для `params` — значение до и после форматирования.
-- `attribute-reference.md` «Anti-patterns» (5 сниппетов); `.phpstorm.meta.php` (§2.3).
+- `Attribute\Param\Condition { evaluate(object $subject): bool }`; `Equals` реализует только его; `ParamValue` — закрытое
+  множество из четырёх (docblock синхронизирован). Тип `when` во **всех восьми** местах — `string|Condition|Closure|null`
+  (`IndexNow.php:55`, `IndexNowDefaults.php:36`, `IndexNowUrl.php:34`, `UrlRule.php:27,130`, `RuleCompiler.php:155,172`,
+  `ParamExtractor.php:138`, `ChangeClassifier.php:66`); `ObjectChangeHandler.php:204-206` — порядок веток `match` после
+  разрыва наследования. `Equals` в `params` — ошибка типов и рантайм-ошибка `ParamExtractor` с текстом §2.2.
+- Детекция удаления по переходу `true → false` для пользовательского `Condition`: опциональный `Attribute\Param\FieldCondition
+  extends Condition { field(): string; heldFor(mixed $oldValue): bool }`; без него `ChangeClassifier` считает, что условие
+  «держалось до», и удаление не детектируется — записано в `attribute-reference.md`. Тир Implement с оговоркой pre-1.0.
+- `ExplainRunner` печатает значения: `when: status ("draft") -> true — a non-empty string is truthy; use new Equals('status',
+  'published')`; `explain --json`. «Anti-patterns» (§3.3), `.phpstorm.meta.php` (§3.1).
 
-### 4.7. Тексты ошибок (12 переписываются)
+### 5.7. Прочее волны E
 
-`Config.php:192` (resolver — два отдельных сообщения с фактами), `:214` (retry — пять отдельных проверок), `:245`
-(engines — перечислить допустимые), `:198` (key_prefix — расшифровать ограничение); `ClassNameResolver:46,49`
-(где искали; для чего нужен класс); `ParamExtractor:88` (что допустимо, `Equals` только в `when`), `:129` (перечислить
-перебранные имена); `ModelLoader:80`, `ActiveRecordLoader:70` (какой базовый класс нужен); `IndexNowObserver
-(yii2):229` (что делать); `Checker:128` (начало тела). Правило для всех: факт + допустимое + как исправить.
+- `indexnow:config --json` (console): эффективная конфигурация после дефолтов и env, ключ маскирован — артефакт для
+  баг-репортов и ассистентов. `indexnow:status` — **не** в E (зависит от `history`/очередей), волна F.
+- Laravel и Yii2 передают событийный диспетчер в `Submitter` (Laravel `Event::dispatch` мост → Telescope; Yii2
+  `EVENT_RESULT`); Laravel `AboutCommand::add('IndexNow', …)`.
+- Yii2: `-v/-vv/-vvv` наследуются в `ConsoleOutput` вместо собственного `--verbose`.
+- Новые `Reason` для `verify` (enum закрыт, сторонний пакет case добавить не может):
 
-### 4.8. Паритет наблюдаемости адаптеров
+  | Case | `isSkip()` | `retryable` |
+  |---|---|---|
+  | `Noindex`, `RobotsDisallowed`, `NonCanonical` | да | нет |
+  | `Redirected` (политика `skip`) | да | нет |
+  | `OriginError` | да | да |
 
-- Laravel и Yii2 передают PSR-14/событийный диспетчер в `Submitter` (Laravel: `Event::dispatch` мост → Telescope видит
-  `Result`; Yii2: `trigger()` события компонента `IndexNowComponent::EVENT_RESULT`).
-- Laravel `AboutCommand::add('IndexNow', …)`: enabled/dry_run, dispatch, key file URL (маска), debounce store.
-- `indexnow:status` (console, новый раннер + команды в трёх адаптерах): коллектор (сколько собрано), debounce store
-  (тип, живость), счётчик 403 (§4.3), последняя успешная отправка (через `SubmissionStoreInterface`, если не Null),
-  очередь (адаптер: длина, если знает), `--json`.
+- `SitemapRunner`: warning в рантайме, когда прогон без `--changed-since` отправил больше `batch.max_urls` URL.
+- Релизы: `core@0.8.0` → `console@0.2.0` → `testing@0.1.x` → `sitemap@0.3.x` → `doctrine@0.5.x` → `symfony-bundle@0.9.0` →
+  `laravel@0.10.0` → `yii2@0.8.0`. Changed: `Equals` в `params` не принимается; `strip_tracking_params` включён (ключи
+  дебаунса меняются один раз); `check --strict` рекомендован в деплое.
 
-### 4.9. Прочее волны E
+## 6. Волна F: новые опциональные пакеты (сначала `verify`, потом `history`)
 
-- `explain --json`.
-- `Yii2`: `-v/-vv/-vvv` Yii наследуются в `ConsoleOutput` вместо собственного `--verbose`.
-- `Config`: явное `dry_run: false` отличается от «не задано» (для будущего расширения авто-dry_run в 1.0; в 0.7 только
-  хранится как `?bool`); `production_environments` промах — строка `environment` в check (§4.1) закрывает.
-- `docs/bc.md` в каждом адаптере (что стабильно: конфиг-ключи, команды, service id/binding'и/свойства).
+### 6.1. `indexnowkit/verify` 0.1.0
 
-### 4.10. Релизы волны E
+- `Verify\PageSignals` — парсер `<meta name="robots">`, `X-Robots-Tag`, `<link rel="canonical">`, robots.txt (~120 строк, без
+  зависимостей) — живёт здесь, не в core.
+- `Verify\VerifyingSubmitter implements SubmitterInterface` — декоратор с pre-flight GET (не HEAD) и политиками `redirect:
+  skip|follow`, `non_canonical: skip|replace`, `origin_error: skip|send`; кэш robots.txt на хост; `delay` после коммита;
+  `--no-verify` у `sitemap`. Конфиг-блок `verify.*` (dotted в `OPTIONS` пакета). Выключен по умолчанию.
+- `Verify\Check\SampleCheck implements CheckInterface`: `check --sample=<url>` (повторяемый) и `--sample-class=<FQCN>`
+  (через `SubjectLoaderInterface` из console); без явного источника — строка «no sample given»; результаты **не поднимают
+  уровень отчёта выше warning** (прод из CI может быть недоступен); печатает статус, noindex, canonical, robots.
+- Регистрация в адаптерах за `OptionalPackage`; строка в `check` без пакета.
 
-`core@0.7.0` → `console@0.2.0` → `testing@0.1.1` (если затронут) → `sitemap@0.2.1` → `doctrine@0.4.1` →
-`symfony-bundle@0.8.0` → `laravel@0.9.0` → `yii2@0.7.0`. Раздел Changed каждого адаптера: `check` может стать красным
-на стейджинге (это цель), `Equals` в `params` больше не принимается.
+### 6.2. `indexnowkit/history` 0.1.0
 
-## 5. Волна F: новые опциональные пакеты
+- `Psr16SubmissionStore` (кольцевой буфер N записей, дефолт 500), `PdoSubmissionStore` (таблица `indexnow_submissions`,
+  индексы по url и at, `purge(olderThan)`); миграции — примеры для Doctrine Migrations, Laravel, Yii2.
+- `History\Console\Definitions::history()` + `HistoryRunner`: `indexnow:history [--host] [--status] [--url] [--limit] [--json]`;
+  `indexnow:status` (коллектор, debounce store, счётчик 403, последняя успешная отправка, очередь — где адаптер знает).
+- Symfony: вкладка в профилере; строка в `check`: «history: 1 240 records, last 3 min ago».
 
-### 5.1. `indexnowkit/history` 0.1.0
+## 7. Политики и критерии 1.0
 
-- Реализации `SubmissionStoreInterface`: `Psr16SubmissionStore` (кольцевой буфер N записей в PSR-16, дефолт 500),
-  `PdoSubmissionStore` (таблица `indexnow_submissions`: url, host, status, reason, http_code, engine, at; индекс по url и
-  at; ретенция `purge(olderThan)`); миграции — примеры для Doctrine Migrations, Laravel, Yii2 в `docs/`.
-- `History\Console\HistoryRunner` + `Definitions::history()`: `indexnow:history [--host] [--status] [--url] [--limit] [--json]`.
-- Строка в `check` через `OptionalPackage` (не установлен) или «history: 1 240 records, last 3 min ago».
-- Symfony: вкладка в профилере (последние N); Laravel/Yii2 — команда.
-- Адаптеры: `suggest`, регистрация за `OptionalPackage` (образец — sitemap).
+- **PHP:** минимальная версия поднимается в первом миноре после выхода предыдущей из security-поддержки (`^8.2` → `^8.3`
+  в первом миноре после 2026-12-31). **Подъём минимальной PHP — не нарушение BC**: Composer не предложит новый минор на
+  старом PHP (записать в `bc.md`). Таблица `php/docs/compatibility.md` (пакет × PHP × фреймворк × EOL); Symfony 6.4 LTS
+  до ноября 2027 совместим с этим правилом.
+- **Критерии 1.0 core** (`91-roadmap.md`): ноль `Symfony\Component\Console\`/`PHPUnit\` в `src/`; ноль лживых `suggest`;
+  тир «may grow» исчез; `ParamExtractor::registerReader()` заменён инъекцией; `RuleAwareUrlResolverInterface` закрыт;
+  `Adapter\Services`/`VerifyingStaging` прошли критерий формы с Yii3; **один полный минор (0.9) без breaking** после E;
+  `SubmissionStoreInterface`, `Condition`, `Http\Response::headers`, `CheckItem::code`, `Client` failure-cache прожили минор;
+  **ни одного `@deprecated` члена на теге 1.0** (`serve_key_file` удаляется в 1.0); `UPGRADE.md` 0.x → 1.0 один на семейство;
+  идентификаторы conformance (C01–C22, A01–A21, H01–H06) заморожены как кросс-языковой контракт; docs-сайт и README-разделы
+  для ассистентов есть; `check --json` валидируется схемой.
+- **Trademark «IndexNow».** Решение пользователя (§10); предлагаемая фиксация в `00-overview.md`: описательное
+  использование названия протокола в имени `indexnowkit`, дисклеймер стоит; план отхода — переименование vendor'а
+  (PHP через `replace`; npm/PyPI/RubyGems/Maven — отдельные шаги, бренд уже занят на npm); **триггеры пересмотра**: до
+  покупки домена и до PR в `recipes-contrib` (оба шага резко повышают видимость; переименование сегодня почти бесплатно).
+- **Домен**: не блокер. **Спонсорство**: нет. **Flex-рецепт**: PR после трекшна и решения по trademark.
+- **Dependabot vs Renovate**, **Codecov vs статический порог** — §10.
 
-### 5.2. `indexnowkit/verify` 0.1.0
+## 8. Риски
 
-- `Verify\VerifyingSubmitter implements SubmitterInterface` — декоратор с pre-flight GET по каждому URL (не HEAD):
-  статус, `<meta name="robots">`, `X-Robots-Tag`, `<link rel="canonical">`, robots.txt (кэш на хост). Политики:
-  `redirect: skip|follow` (follow — отправить `Location`), `non_canonical: skip|replace`, `origin_error: skip|send`.
-  Новые `Reason` добавляются в core в волне E (`Noindex`, `RobotsDisallowed`, `NonCanonical`, `Redirected`,
-  `OriginError` — `bc.md` разрешает расширять `Reason`), чтобы пакет не требовал core-релиза.
-- Выключен по умолчанию; конфиг-блок `verify` (`enabled`, `timeout`, `concurrency`, `delay` — задержка после коммита,
-  чтобы не ловить ложные 404 до деплоя кэша). Документация про стоимость (один GET на URL) и про то, что для
-  sitemap-прогонов его надо выключать (`--no-verify` у `sitemap`).
-- `check --sample` (§4.1) переиспользует тот же анализатор HTML/заголовков: он живёт в core как `Url\PageSignals`
-  (парсер meta robots / canonical / X-Robots-Tag, ~120 строк, без зависимостей), `verify` — только политика и декоратор.
+- **Порядок релиза D**: адаптеры требуют `console ^0.1`, `testing` в `require-dev`; регистрация пакетов на Packagist до
+  первого пуша адаптеров; `packagist-wait-main` читает `require` + `require-dev` — учтёт.
+- **Красный `check` на стейджинге** (0a): ломает пайплайны, где `check` стоял без `--strict` и окружение слало нарочно;
+  выход — явный `dry_run: false` → warning; описано в CHANGELOG.
+- **`strip_tracking_params` по умолчанию** (E): меняет ключи дебаунса один раз; URL с трекингом больше не уходят —
+  это цель; список закрытый, роутинг такие параметры не генерирует.
+- **`Condition`** — breaking только для `Equals` в `params` (баг); каскад из восьми мест перечислен.
+- **Docs-сайт**: переписывание ссылок скриптом; `--strict` требует полного `nav` — генерируется.
+- **AI-артефакты** живут в README — `ReadmeAiNotesTest` держит их синхронными с `Definitions`/`OPTIONS`.
+- **Волна 0b длинная**: не гейт для D/E; DoD отдельный.
 
-## 6. Политики и критерии 1.0
+## 9. Definition of Done (проверяемые критерии)
 
-- **PHP:** минимальная версия поднимается в первом миноре после выхода предыдущей из security-поддержки: `^8.2` → `^8.3`
-  в первом миноре после 2026-12-31. Записать в `core/docs/bc.md` и `91-roadmap.md`; таблица совместимости
-  `php/docs/compatibility.md` (пакет × PHP × фреймворк × EOL).
-- **Фреймворки:** Symfony 6.4 LTS до конца его поддержки; Laravel — два последних мажора; Yii2 2.0.45+; Doctrine ORM
-  2.19/3, DBAL 3/4 — до EOL ORM 2.
-- **Критерии 1.0 core** (в `91-roadmap.md`): ноль `Symfony\`/`PHPUnit\` в `src/`; ноль лживых `suggest`; тир «may grow»
-  исчез (семь интерфейсов зафиксированы); `ParamExtractor::registerReader()` заменён инъекцией; `RuleAwareUrlResolverInterface`
-  закрыт; `Adapter\Services` имеет второго потребителя (Yii3) или возвращён в yii2; два минора подряд без breaking;
-  `SubmissionStoreInterface`, `Condition`, `FailureCounterInterface` прожили минимум один минор; docs-сайт и AGENTS.md
-  есть; conformance-киты в `testing` покрывают C01–C22, A01–A21, H01–H06.
-- **BC адаптеров:** `docs/bc.md` в каждом (волна E).
-- **Trademark «IndexNow».** Открытый пункт спеки 91 висит после публикации. Решение пользователя; предлагаемая
-  формулировка для `00-overview.md` и README: описательное (nominative) использование названия протокола в имени
-  `indexnowkit`, дисклеймер уже стоит; при претензии правообладателя — переименование vendor'а с `replace` в composer.
-  Зафиксировать решение, а не вопрос.
-- **Домен `indexnowkit.dev`:** не блокер; GitHub Pages сейчас, домен по желанию.
-- **Спонсорство:** нет; убрать из спеки 90.
-- **Flex-рецепт:** PR в recipes-contrib отложен пользователем; в README бандла раздел «Advanced install» с private
-  endpoint `extra.symfony.endpoint` на `recipe/index.json` сплита (Flex поддерживает произвольные endpoint'ы) — даёт
-  автоустановку сегодня.
+0a: тест четырёх состояний стейджинга; `check` staging-конфига адаптера → exit 1; тест дебаунса; `INDEXNOW_PREVIOUS_KEY`;
+`Engine` ×2; 12 текстов; `DebounceStoreCheck` в бандле; README-дефекты; `bin/packagist-check`; topics/LICENSE/Issues-off/
+Dependabot/`composer audit`/advisories; `authors`; бейджи; SECURITY SLA; релизы §2.5.
 
-## 7. Риски
+0b: `grep -ril 'noindex\|robots.txt\|canonical' packages/*/docs` не пуст; prod checklist — первая ссылка раздела Operations в
+трёх README; раздел «Notes for AI assistants» ×6 и `ReadmeAiNotesTest` зелёный; `ReadmeQuickstartTest` ×3 зелёный; Boost
+guideline; `.phpstorm.meta.php`; `context7.json` + репозиторий submitted; сайт опубликован, `llms.txt`/`llms-full.txt`
+отдаются, `mkdocs build --strict` и `lychee` зелёные; `bin/config-table` и тест; Yii2 `configuration.md`/`testing.md`/
+`multi-domain.md` по разделам не уступают Laravel; три RU-документа; внешний человек прошёл quickstart Yii2 без ошибок.
 
-- **Два новых пакета за одну волну (D).** Механика та же, что у sitemap; риск — в порядке релиза (adapters требуют
-  `console ^0.1`, которого нет на Packagist до тега) — `packagist-wait` между шагами уже есть; `split.yml` стадии
-  расширяются на testing/console.
-- **Переименование assertion-хелперов и `ResultSummary`/`SubmitterFactory`.** Потребители — только монорепо; для
-  внешних авторов адаптеров — строка миграции в CHANGELOG.
-- **`check` становится красным на стейджинге.** Это цель, но ломает чьи-то пайплайны, где `check` стоял без `--strict` и
-  окружение «staging» слало нарочно. Выход: `dry_run: false` явно + `INDEXNOW_ALLOW_NON_PRODUCTION_SUBMISSIONS=1`?
-  Нет — не вводить обходной флаг; error только при `enabled && !dryRun && !isProduction`, и в CHANGELOG сказано, как
-  выключить (`dry_run`, `enabled`, или добавить окружение в `production_environments`, если оно действительно боевое).
-- **`Condition`/`ParamValue` — breaking в модели атрибутов.** Затронуты только те, кто передавал `Equals` в `params`
-  (баг); `AttributeTest` и conformance подтверждают остальное.
-- **`--sample` ходит по сайту пользователя.** Только по явному флагу; таймаут 5 с; не в `--json` без флага.
-- **Docs-сайт и монорепо-сборка.** Ссылки в README относительные к пакету (`docs/...`) и абсолютные на GitHub;
-  сборщик переписывает их плагином, тест сайта проверяет отсутствие битых ссылок (`mkdocs build --strict`).
-- **AGENTS.md разъезжается с кодом.** `AgentsFileTest` проверяет команды/ключи; таблица ключей генерируется.
-- **Объём.** Волна 0 не требует релизов core и делается параллельно с D; E — самая большая, но каждая строка §4 —
-  отдельный коммит с тестом.
+D: гейт `grep -rl 'Symfony\\Component\\Console\|PHPUnit\\' packages/core/src packages/sitemap/src` пуст; `grep -rn class_exists
+packages/{symfony-bundle,laravel,yii2}/src` не содержит `SitemapReader`; классов `SitemapSupport` нет; core без
+`symfony/console` в `suggest`/`require-dev`, без `phpunit` в `suggest`; `testing`/`console` на Packagist, branch-alias есть;
+все адаптеры зелёные на `highest`/`lowest`; ~106 файлов core.
 
-## 8. Definition of Done
+E: `check --json` валидируется `docs/check.schema.json` в тесте; каждый `CheckItem` имеет `code` (тест: нет item без code);
+`--strict`; `Content-Type`/`Cache-Control`/robots/`previous_key` под тестами с `FakeTransport`; `--force` с непустым
+`PREVIOUS_KEY` отказывает; счётчик 403 в PSR-16 с TTL под тестом; `SubmissionStoreInterface` + `NullSubmissionStore` во всех
+адаптерах; `UrlNormalizerFactory` — ноль `new UrlNormalizer(` вне фабрики (grep); `Condition` восемь мест; `explain`
+значения + `--json`; `config --json`; PSR-14 в Laravel/Yii2; `about`; таблица `Reason`.
 
-Волна 0:
-- Packagist-витрина трёх пакетов актуальна; `bin/packagist-check` в репо; topics/LICENSE/Issues-off/org `.github`/
-  Dependabot/CodeQL/CoC/шаблоны на месте; бейджи и `authors` едины.
-- README-дефекты §2.2 исправлены; `ReadmeQuickstartTest` в трёх адаптерах зелёный.
-- `AGENTS.md` ×7, `context7.json`, Boost guidelines, `.phpstorm.meta.php`; `AgentsFileTest` зелёный.
-- Docs-сайт опубликован, `llms.txt`/`llms-full.txt` доступны, `mkdocs build --strict` в CI.
-- Документы §2.5–2.7 написаны; Yii2-доки по объёму разделов не уступают Laravel; три RU-перевода.
+F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в `check`, документы; `check --sample` работает только с
+пакетом.
 
-Волна D:
-- `grep -rl 'Symfony\\\|PHPUnit\\' packages/core/src` пуст; `composer.json` core без `symfony/console`, `phpunit` в
-  `suggest`/`require-dev`; пакеты `testing` и `console` на Packagist; все адаптеры зелёные на `highest`/`lowest`.
-- `grep -rn 'SitemapSupport\|class_exists(\\\\IndexNowKit\\\\Sitemap' packages/{symfony-bundle,laravel,yii2}/src` пуст
-  (всё через `OptionalPackage`).
-- Тест дефекта дебаунса; `Engine` с двумя новыми участниками; `INDEXNOW_PREVIOUS_KEY`.
+## 10. Решения пользователя
 
-Волна E:
-- `indexnow:check --json --strict` во всех трёх адаптерах; тест «staging + key → error»; `Content-Type`, `Cache-Control`,
-  robots, `previous_key`, `--sample` покрыты тестами с `FakeTransport`; `DebounceStoreCheck` в бандле.
-- `key:generate --force` пишет `PREVIOUS_KEY`; `FailureCounterInterface` с PSR-16 реализацией; `SubmissionStoreInterface`
-  + `NullSubmissionStore` подключены во всех адаптерах; `CanonicalUrlNormalizer` + опции; `Condition`; 12 текстов;
-  `explain` со значениями и `--json`; `status`; `about`; PSR-14 в Laravel/Yii2; `docs/bc.md` в адаптерах.
-
-Волна F:
-- `history` и `verify` на Packagist, зарегистрированы в адаптерах за `OptionalPackage`, документированы, строки в `check`.
-
-Повторный аудит по пяти линзам после F: все ≥ 9, кроме «DX AI» ≥ 8 (зависит от внешних индексаторов).
-
-## 9. Решения, которые остаются за пользователем
-
-1. Лицензия `indexnowkit/spec`: CC-BY-4.0 (дефолт) или MIT.
-2. Trademark: принять формулировку §6 и закрыть пункт 91.
-3. Домен `indexnowkit.dev`: покупать сейчас или позже (дефолт — позже).
-4. RU-перевод: три документа (дефолт) или вся документация.
-5. Волна F (`history`, `verify`): делать сразу после E (дефолт) или по спросу.
-6. Спонсорство: не заводить (дефолт).
+1. Лицензия `indexnowkit/spec`: MIT (дефолт) или CC-BY-4.0 текст + MIT код.
+2. Trademark: принять формулировку §7 с триггерами пересмотра.
+3. `Engine::Yandex`: `yandex.com` или `www.yandex.com` — после одного реального POST.
+4. Домен `indexnowkit.dev`: позже (дефолт).
+5. RU-перевод: три документа (дефолт) или вся документация.
+6. `history`: сразу после `verify` (дефолт) или по спросу. `verify` — делается (спрос доказан аудитом).
+7. Dependabot с `groups` (дефолт) или Renovate (GitHub App).
+8. Codecov (живой процент, сторонний сервис) или статический бейдж порога (дефолт).
+9. Спонсорство: не заводить (дефолт).
