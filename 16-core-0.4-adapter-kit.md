@@ -523,6 +523,19 @@ final class ObserverHelper
 `VerifyingStaging` + события соединения (Yii2). Тексты логов удаления: адаптеры либо переходят на тексты хелпера, либо
 `docs/operations.md` фиксирует свои.
 
+Уточнения по реализации (волна B):
+
+- `logResolved(array $resolved)` без параметров `$subject`/`Event`: каждый `ResolvedUrl` несёт свой event и источник,
+  лишние параметры были бы мёртвыми. `guard()` сам вызывает `logResolved()`; отдельный вызов — для адаптеров, которые
+  резолвят вне `guard()`.
+- Тексты логов удаления: адаптеры перешли на тексты хелпера (`cannot resolve the URLs of {class}: {error}` и для
+  «до удаления»; отдельной строки «before deletion» больше нет). Строки хелпера — в `docs/operations.md` core, раздел
+  «ORM hooks».
+- Yii2 `IndexNowObserver` держал второй `WeakMap<Connection, true>` (подключения с уже повешенными commit/rollback);
+  он заменён на `SplObjectStorage` (подключения живут всё приложение), чтобы гейт §11 «`WeakMap` только в
+  `ObserverHelper`» выполнялся буквально.
+- `$enabled` (флаг `eloquent.enabled` / `active_record.enabled`) остаётся у адаптера: хелпер не знает о нём.
+
 ### 4.3. `Retry\WorkerOutcome` (волна B)
 
 ```php
@@ -551,6 +564,21 @@ final readonly class WorkerOutcome
 }
 ```
 
+Уточнения по реализации (волна B):
+
+- Лог-методы без `Vocabulary`: в словаре нет ни одного слова, которое им нужно; команда check передаётся строкой
+  `$checkCommand` (Laravel `php artisan indexnow:check`, Messenger `bin/console indexnow:check`, Yii2
+  `php yii indexnow/check`). Сигнатуры: `retryLog(string $jobId, ?int $delay = null, ?int $attempt = null)`,
+  `gaveUpLog(string $jobId, int $attempt)`, `finalLog(string $jobId, string $checkCommand)`. `$attempt` в `retryLog`
+  nullable: Messenger и yii2-queue не сообщают job'у номер попытки; шаблон
+  `indexnow: {count} URL(s) of job {id} will be retried{delay}{attempt}` с `{delay}` = ` in {n}s` и `{attempt}` =
+  ` (attempt {n})` или пустыми строками. Messenger теперь тоже говорит «job {id}» (было «message {id}»,
+  `docs/messenger.md` бандла обновлён).
+- `of()` принимает `list<Result>` и хранит результаты для `delay()` (`RetryPolicy::delayAfter()` считает по ним).
+- Контекст лог-строк не содержит списков URL (как и раньше в адаптерах): `logging.max_urls` на них не влияет.
+- Messenger-хендлер логирует финальные отказы через `finalLog()` (раньше — только строка клиента) и затем, если есть
+  retryable, бросает `RecoverableMessageHandlingException` с `retryAfter` (Symfony ≥ 7.2).
+
 Три воркера сводятся к `WorkerOutcome::of($results)` и своим действиям: Laravel `release($o->delay(...))`/`fail()`,
 Messenger `throw new RecoverableMessageHandlingException` с `retryAfter`, Yii2 `canRetry()` по `hasRetryable()` без
 задержки (yii2-queue не умеет delay из job'а — документируется).
@@ -563,6 +591,31 @@ sitemap-пакет добавляет `Sitemap\Console\Definitions::sitemap()`. 
 (бандл, Laravel `$signature` генерируется хелпером `Definitions::laravelSignature()`), Yii2 — `options()`/`optionAliases()`.
 Расхождения описаний между тремя адаптерами (сегодня есть) исчезают; тест в core проверяет, что каждое определение
 покрывает `SubmitSubjectsOptions`/`SitemapOptions`.
+
+Уточнения по реализации (волна B):
+
+- Модель: `Console\CommandDefinition(description, arguments: list<ArgumentDefinition>, options: list<OptionDefinition>)`
+  с методами `argument(name)`, `option(name)`, `applyTo(Symfony\Command)` (аргументы, опции, описание),
+  `laravelSignature(string $command): string`, `yiiOptions(): list<string>` (camelCase-свойства контроллера),
+  `yiiAliases(): array<string, string>`. `OptionDefinition(name, description, mode: flag|value|optional, shortcut,
+  default)` с `property()` (`dry-run` → `dryRun`); `ArgumentDefinition(name, description, required, array)`.
+  `laravelSignature()` живёт на `CommandDefinition`, не на `Definitions` (спека называла
+  `Definitions::laravelSignature()`): рендер — свойство определения, как `applyTo()`.
+- `Definitions::submitSubjects(Vocabulary $words, string $classArgument = 'class')` и `explain(Vocabulary $words,
+  string $classArgument = 'class')`: имя аргумента класса — публичный API команды (`ArrayInput(['class' => …])` в
+  бандле, `{model}` в artisan), поэтому адаптер передаёт своё; описание аргумента — `<Subject> class (FQCN or short
+  name)`. `Definitions::keyGenerate(string $defaultEnvFile = '.env')`: файл по умолчанию печатается в описании
+  `--write-env` (бандл `.env.local`, Laravel/Yii2 `.env`). `Sitemap\Console\Definitions::sitemap(string
+  $sitemapUrlOption = 'sitemap.url')` — имя опции печатается в описании аргумента (Laravel `indexnow.sitemap.url`).
+- Опция с необязательным значением (`--write-env`) в Symfony — `VALUE_OPTIONAL` с дефолтом `false` (как было), в
+  artisan — `{--write-env= : …}` плюс `hasParameterOption()` в команде (как было), в Yii — свойство `writeEnv`.
+- Описания команд унифицированы: бандл в `#[AsCommand(description:)]` держит тот же текст (атрибут — константа,
+  нужен ленивой загрузке), `applyTo()` ставит его же; Laravel берёт `$definition->description` в конструкторе перед
+  `parent::__construct()` вместе с `$signature`. Yii2 `options()`/`optionAliases()` строятся из определений;
+  описания опций в Yii печатаются из docblock'ов контроллера и не унифицируются (ограничение Yii).
+- Тест `DefinitionsTest` в core: сигнатура artisan снапшотом, `applyTo()` через `Symfony\Component\Console\Command`,
+  списки Yii, покрытие `SubmitSubjectsOptions` (порядок параметров конструктора = порядок аргументов + опций);
+  `Sitemap\Tests\Unit\DefinitionsTest` — то же для `SitemapOptions`.
 
 ## 5. Тесты и покрытие
 
