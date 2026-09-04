@@ -92,7 +92,13 @@ CHANGELOG.
 - CHANGELOG core 0.4.0: раздел «Removed» с миграцией (§9).
 
 Гейт (DoD): `grep -ril sitemap packages/core --exclude-dir=vendor` возвращает ровно `CHANGELOG.md`, `README.md`,
-`README.ru.md`, `composer.json`; в трёх последних — по одному вхождению (таблица Family / description).
+`README.ru.md`, `composer.json`; в `composer.json` — одно вхождение (description), в README EN/RU — строка таблицы
+Family плюс Google-абзац (два слова «sitemap» про протокол, не про пакет). Остальные документы core (`docs/*.md`,
+SECURITY) говорят «пакет-дополнение из таблицы семейства», не называя его.
+
+Адаптеры при `sitemap.enabled: false`: бандл не регистрирует команду; Laravel и Yii2 печатают `sitemap.enabled is
+false.` и выходят с `INVALID` (Laravel раньше игнорировал флаг в команде). Невалидный блок `sitemap` в Laravel/Yii2 —
+critical-лог и `SitemapConfig::disabled()`, как у core-опций.
 
 ### 1.3. Новое в пакете
 
@@ -138,9 +144,8 @@ final class SitemapRunner
         SubmitterFactoryInterface $submitters,
         ?string $defaultSitemap = null,
         ResultFormatterInterface $formatter = new ResultRenderer(),
-        Vocabulary $words = new Vocabulary(),
         string $sitemapUrlOption = 'sitemap.url',   // бывшее Vocabulary::$sitemapUrlOption; печатается в «Give a sitemap URL, or configure %s or base_url.»
-    ) {}
+    ) {}                                            // Vocabulary не принимает: раннер не печатает ни одного слова из него (phpstan: unused property)
 }
 
 namespace IndexNowKit\Sitemap\Check;
