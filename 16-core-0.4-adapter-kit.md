@@ -426,6 +426,33 @@ final class Services
 - Staging (`TransactionStaging`/`VerifyingStaging`), observer'ы и маршрут key file остаются на стороне адаптера.
 - `IndexNowKit::create()` НЕ реализуется поверх `Services` (оставляет свою проверку комбинаций и plain-PHP форму).
 
+Уточнения по реализации (волна B):
+
+- Граф читает правила через `rules()`, не через `reader()`: `urlResolver()`, `guardedResolver()`, `kit()` получают
+  `RuleRegistry` (сам reader, если он уже `RuleRegistry`, иначе обёртка), поэтому `rules()->register()` виден всем
+  потребителям при любом переданном reader. `reader()` возвращает узел как дан.
+- `changes()` — `kit()->changes()` (собственный обработчик фасада), а не второй экземпляр `ObjectChangeHandler`;
+  `guardedResolver()` — тот же объект, что `kit()->resolver()`.
+- `kit()` всегда получает `transport()` (в отличие от `create()`, где `$transport` `null` при кастомном submitter'е):
+  у `Services` транспорт всегда выводим, и sitemap-пакет берёт его оттуда.
+- `build()` проверяет статические ошибки самими фабриками: `TransportFactory::lazy()` (id без локатора) и
+  `DebounceStoreFactory::fromConfig()` (id без `debounceStore()`) вызываются только ради исключения, их результат
+  отбрасывается; проверка `dispatch` — текст `DispatcherFactory` («needs a queue dispatcher…»); при `enabled: false`
+  очередь не требуется (как в фабрике). Тип результата замыкания проверяется при первом обращении:
+  `LogicException` «ServicesBuilder::<узел>(): the closure must return <тип>, got <тип>».
+- `checks()` принимает `iterable` или `Closure(Services): iterable`; замыкания узлов получают `Services` первым
+  аргументом. Конструктор `Services` — `@internal`, строится только `ServicesBuilder::build()`; имена узлов —
+  константы `Services::TRANSPORT` и т. д.
+- Билдер мутабельный (fluent `self` возвращает `$this`), как принято у билдеров; `build()` можно звать один раз на
+  описание.
+- Тест паритета `ServicesParityTest`: рефлексией перечисляет публичные методы `Services`, для каждого (кроме
+  `hasCollected`/`flushIfCollected`) есть двойник, собранный вручную фабриками §3.1; сравнение — рекурсивный экспорт
+  свойств (замыкания и показания часов `TokenBucket` заменены плейсхолдерами).
+- Yii2: новый публичный `IndexNowComponent::services(): Services`; прежние методы графа (`kit()`, `transport()`,
+  `debounceStore()`, …) — делегаты. `routeResolver()` остаётся не-nullable (компонент всегда даёт роутер).
+  Переопределения-свойства проходят через `Instance::ensure` внутри замыканий узлов; `flushIfCollected()` —
+  `services?->flushIfCollected()`, так что запрос без сбора ничего не строит.
+
 Yii2: `IndexNowComponent` держит `ServicesBuilder` с замыканиями `httpClientLocator` (`App::component() ?? Yii::$container`),
 `debounceStore` (через `YiiCacheDebounceStore`: кэш Yii не PSR-16, поэтому переопределяется store, а не локатор кэша),
 `queueFactory` (`QueueDispatcher`), `router`, `resolverLocator`, `checks`. Публичные методы компонента становятся
