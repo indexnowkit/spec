@@ -302,8 +302,27 @@ Yii3, Битрикс, plain PHP). Первому нужны фабрики на 
 
 Конструкторы всех классов остаются; фабрики — сахар с одним источником текстов ошибок. `IndexNowKit::create()`
 переписывается через них, сохраняет сигнатуру (минус `$sitemap`) и проверку несовместимой комбинации «`$submitter` +
-`$transport/$debounce/$throttle/$normalizer`». Laravel и бандл переводят тела binding'ов/сервисов на фабрики уже в
-волне A (service id и binding'и не меняются); Yii2 — свои приватные методы.
+`$transport/$debounce/$throttle/$normalizer`»; следствие: `create()` с `dispatch` вне `{sync, none}` и без
+`$dispatcher` теперь бросает `ConfigurationException` (раньше молча ставил `SyncDispatcher`). Laravel и бандл
+переводят тела binding'ов/сервисов на фабрики уже в волне A (service id и binding'и не меняются); Yii2 — свои
+приватные методы.
+
+Уточнения по реализации (волна A):
+
+- Локатор `DebounceStoreFactory::fromConfig` может вернуть не только PSR-16 кэш, но и готовый
+  `DebounceStoreInterface` — для фреймворков, чей кэш не PSR-16 (Yii2 отдаёт `YiiCacheDebounceStore`). Так гейт
+  «`match ($store`» выполняется и в Yii2 без второго слоя.
+- Бандл: `http.client` и `debounce.store` — compile-time факты контейнера (service id), поэтому
+  `indexnowkit.transport.real` остаётся своей фабрикой (оборачивает symfony/http-client, проверка через
+  `TransportFactory::psr18()`), а `indexnowkit.debounce_store` — compile-time ветвлением на определения;
+  `TransportFactory::lazy()` и `DebounceStoreFactory` в бандле не используются. Остальные сервисы
+  (`throttle`, `collector`, `url_resolver`, `key_file_responder`, `resolver_locator`, `sitemap_reader`) — фабрики.
+- `Url\ArrayResolverLocator(locate:, hint:)`: бандл строит его через статическую `Url\ResolverLocatorFactory::create(ContainerInterface)`
+  (замыкание нельзя описать как DI-аргумент); классы `ContainerResolverLocator` трёх адаптеров удалены.
+- `Check\DebounceStoreCheck(Config, ?Closure $probe = null, string $default = 'memory')`: третий параметр —
+  store адаптера при незаданном `debounce.store` (Laravel/Yii2 `cache`); probe вынесен в `Laravel\Check\CacheStoreProbe`
+  и `Yii2\Check\CacheProbe` (invokable), классы `CacheStoreCheck`/`CacheCheck` удалены.
+- `CollectorInterface::count()` добавлен (tier «may grow»); `Collector` его уже имел.
 
 ### 3.2. `Adapter\Services` и `Adapter\ServicesBuilder` (слой 2, волна B)
 
