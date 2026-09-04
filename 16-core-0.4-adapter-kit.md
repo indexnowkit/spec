@@ -10,6 +10,7 @@
 |---|---|---|---|
 | A | 0.4.0 | §1 sitemap-пакет, §2 `Config` + `Adapter\ConfigFactory`, §3.1 статические фабрики, §4.1 мелкие блоки, phpstan lowest | doctrine 0.3.0, symfony-bundle 0.4.0, laravel 0.5.0, yii2 0.2.0, sitemap 0.1.0 |
 | B | 0.5.0 | §3.2 `Adapter\Services`, §4.2 `Hook\ObserverHelper`, §4.3 `Retry\WorkerOutcome`, §4.4 `Console\Definitions`, §5 assertion-хелперы и coverage | doctrine 0.3.1, symfony-bundle 0.5.0, laravel 0.6.0, yii2 0.3.0, sitemap 0.1.1 |
+| C | 0.5.1 | §1.5/§1.7: `indexnowkit/sitemap` в адаптерах снова `suggest` (решение пользователя 2026-09-05), `Check\StaticCheck`, `ConfigFactory(ignoreBlocks:)` | symfony-bundle 0.6.0, laravel 0.7.0, yii2 0.4.0 |
 
 Волна A — механическая и низкорисковая (перенос, фабрики над существующими конструкторами). Волна B меняет форму
 адаптеров и требует проектного внимания; она начинается только после релиза A.
@@ -176,26 +177,71 @@ dev-main 0.1.x-dev`, `minimum-stability dev + prefer-stable`, scripts `ci:instal
 
 ### 1.5. Адаптеры
 
-- `require: indexnowkit/sitemap` (не `suggest`): команда `sitemap` — часть обещанного UX, а в cron «command not found»
-  после обновления хуже лишней зависимости. Условная регистрация, `FeatureCheck`, деградированный узел конфигурации —
-  не нужны.
-- Вся sitemap-проводка адаптера читает только `SitemapConfig::fromArray($block)`: reader через `SitemapReader::fromConfig`,
-  `SitemapSpoolCheck(SitemapConfig)`, `SitemapRunner(..., sitemapUrlOption: '<префикс>.sitemap.url')`. Собственный `intOf`
-  и девять позиционных аргументов исчезают.
-- `unknownOptions`: allowed = `Config::OPTIONS` + `SitemapConfig::OPTIONS` + свои dotted-ключи. Голые `key_file` и
-  `sitemap` из списков убираются (ошибка §0). Регрессионный тест в каждом адаптере: `key_file.enabld` → warning.
-- Бандл: `IndexNowKitConfiguration` продолжает строить узел `sitemap` (дефолты из `SitemapReader::MAX_*`, `SpoolMode` —
-  пакет в `require`, дереференс безопасен); `sitemap.enabled: false` по-прежнему снимает команду. Сервис
-  `indexnowkit.sitemap_reader` — `factory([SitemapReader::class, 'fromConfig'])` с аргументом-сервисом `SitemapConfig`.
-- Laravel: binding `SitemapSourceInterface` остаётся публичным API, тело — `fromConfig`. Yii2: `sitemapSource()`
-  остаётся, тело — `fromConfig`.
-- README адаптеров: раздел Sitemaps ссылается на пакет; `composer require` строка не меняется (транзитивно).
+Решение v2 «`require`, не `suggest`» отменено пользователем 2026-09-05: sitemap ставится только по необходимости.
+Волны A и B вышли с `require`; возврат к `suggest` — волна C (§1.7). Ниже — целевое состояние.
+
+- `suggest: indexnowkit/sitemap` (`"the indexnow:sitemap command"`), не `require`. Без пакета всё остальное работает
+  без единого warning'а в логах; диагностика — в `check`.
+- Определение «пакет установлен»: один предикат на адаптер (`class_exists(\IndexNowKit\Sitemap\SitemapReader::class)`),
+  переопределяемый для тестов (бандл: параметр конструктора `IndexNowKitConfiguration`/`IndexNowKitLoader`
+  `bool $sitemapInstalled`; Laravel/Yii2: `@internal` статическое поле `SitemapSupport::$installed`).
+- Вся sitemap-проводка адаптера живёт за предикатом и читает только `SitemapConfig::fromArray($block)`: reader через
+  `SitemapReader::fromConfig`, `SitemapSpoolCheck(SitemapConfig)`, `SitemapRunner(..., sitemapUrlOption: '<префикс>.sitemap.url')`.
+  Ни одного `use IndexNowKit\Sitemap\*` в файлах, которые загружаются без пакета (иначе `SitemapConfig::OPTIONS`,
+  `SitemapReader::MAX_*`, `Sitemap\Console\Definitions` падают fatal'ом): sitemap-код адаптера — в отдельных классах
+  (`<Adapter>\Sitemap\SitemapServices`, `<Adapter>\Console\SitemapCommand`), которые инстанцируются только при
+  `installed`.
+- `unknownOptions`: allowed = `Config::OPTIONS` + свои dotted-ключи + (`SitemapConfig::OPTIONS`, если установлен).
+  Без пакета блок `sitemap` в конфиге не даёт warning «unknown option»: `Adapter\ConfigFactory` получает параметр
+  `ignoreBlocks: list<string>` (адаптер передаёт `['sitemap']`, когда пакета нет) — ключи этих блоков пропускаются целиком.
+  Голые `key_file`/`sitemap` в `ownedOptions` по-прежнему запрещены (§0).
+- Команда `sitemap` без пакета существует и объясняет: `indexnow:sitemap` (бандл, Laravel) — заглушка
+  `SitemapNotInstalledCommand` с тем же именем, `ignoreValidationErrors()`, вывод
+  `indexnowkit/sitemap is not installed: composer require indexnowkit/sitemap` и exit `ExitCode::FAILURE`; Yii2
+  `actionSitemap` печатает то же. Так cron после обновления получает понятную ошибку, не «command not found».
+- `check` без пакета печатает одну строку `Check\StaticCheck` (core, новый): `sitemap: not installed (composer require
+  indexnowkit/sitemap)`; если блок `sitemap` в конфиге непустой — `sitemap: not installed, the sitemap block in the
+  configuration is ignored (composer require indexnowkit/sitemap)`. Уровень ok: отсутствие опционального пакета — не проблема.
+- Бандл: узел `sitemap` дерева строится через `SitemapReader::MAX_*`/`SpoolMode` только при `installed`; иначе
+  `->arrayNode('sitemap')->ignoreExtraKeys(false)` (узел есть, старые yaml компилируются, содержимое игнорируется).
+  Сервисы `indexnowkit.sitemap_config`, `sitemap_reader`, `check.sitemap_spool`, `console.sitemap`, `SitemapCommand` —
+  только при `installed && sitemap.enabled`; иначе `check.sitemap_missing` (`StaticCheck`) и `SitemapNotInstalledCommand`.
+- Laravel: binding `SitemapSourceInterface` и остальные sitemap-singleton'ы — только при `installed`; иначе заглушка команды
+  и `StaticCheck`. Опубликованный `config/indexnow.php` сохраняет блок `sitemap` с комментарием «needs indexnowkit/sitemap».
+- Yii2: `sitemapConfig()`/`sitemapSource()` остаются публичными; без пакета бросают `LogicException` с текстом установки;
+  `IndexNowController::definitions()` включает `sitemap` только при `installed`; `actionSitemap` без пакета — ошибка и
+  `ExitCode::FAILURE`.
+- Тесты в каждом адаптере с предикатом `false`: команда-заглушка, строка `check`, блок `sitemap` в конфиге без warning'а,
+  остальные команды работают; с предикатом `true` — текущие тесты.
+- README адаптеров: Install — `composer require indexnowkit/sitemap   # optional: the indexnow:sitemap command`;
+  раздел Sitemaps начинается с этой строки.
 
 ### 1.6. Спека и документация
 
 02: строка «Отправить sitemap» в таблице публичного API → «пакет `indexnowkit/sitemap`»; в схеме конфига блок `sitemap`
 с пометкой «пакет sitemap», блок `key_file`. 10: пространство `Sitemap\` в отдельный подраздел «пакет sitemap». 90: пакет в
 семействе и в таблице README-шаблона. 91: статус. Порты на другие языки повторяют форму: core + sitemap-аддон.
+
+### 1.7. Волна C: sitemap снова опциональный (core 0.5.1, адаптеры)
+
+| Пакет | Версия | Изменения |
+|---|---|---|
+| `core` | 0.5.1 | `Check\StaticCheck(CheckLevel $level, string $line)` (Call); `Adapter\ConfigFactory(..., array $ignoreBlocks = [])`; `docs/adapters.md` §2/§20: «опциональные пакеты: предикат, заглушка команды, StaticCheck, ignoreBlocks» |
+| `sitemap` | — | без изменений |
+| `doctrine` | — | без изменений |
+| `symfony-bundle` | 0.6.0 | `require` → `suggest`; `IndexNowKitConfiguration`/`IndexNowKitLoader` с `$sitemapInstalled`; `SitemapNotInstalledCommand`; `StaticCheck`; sitemap-сервисы за предикатом; тесты с предикатом false |
+| `laravel` | 0.7.0 | то же: `SitemapSupport`, `Sitemap\SitemapServices` (регистрация singleton'ов), заглушка, `StaticCheck`, `ConfigFactory` с `ignoreBlocks` |
+| `yii2` | 0.4.0 | то же: `SitemapSupport`, guard в `sitemapConfig()/sitemapSource()`, `definitions()` условно, `actionSitemap` без пакета |
+
+Миграция (в CHANGELOG каждого адаптера, раздел Changed, первым пунктом): «`indexnowkit/sitemap` больше не ставится
+автоматически. Если вы используете `indexnow:sitemap` — `composer require indexnowkit/sitemap`, иначе после
+`composer update` команда сообщит об отсутствии пакета и завершится с кодом 1». Порядок релиза: `core@0.5.1` →
+`packagist-wait` → `symfony-bundle@0.6.0` → `laravel@0.7.0` → `yii2@0.4.0`.
+
+DoD волны C: `bin/ci` зелёный; в каждом адаптере тест-набор с предикатом `false` (команда-заглушка, строка `check`, блок
+`sitemap` без warning'а, остальные команды работают); `grep -rn 'IndexNowKit\\Sitemap' packages/{symfony-bundle,laravel,yii2}/src`
+даёт только файлы, инстанцируемые за предикатом (список в спеке тем же коммитом); `composer.json` адаптеров без
+`indexnowkit/sitemap` в `require`; README/CHANGELOG обновлены; спека 12/13/15 и 91 синхронизированы.
 
 ## 2. `Config` 0.4 и `Adapter\ConfigFactory` (волна A)
 
