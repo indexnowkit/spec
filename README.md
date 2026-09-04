@@ -10,6 +10,7 @@
 | 02-core-architecture.md | Компоненты core, единая схема конфига, объявление модели |
 | 03-conformance.md | Mock-сервер и общий тест-набор |
 | 10–15 | PHP: core, Doctrine, Symfony, Laravel, API Platform/CMS, Yii2/Yii3 |
+| 16-core-0.4-adapter-kit.md | PHP core 0.4/0.5 «adapter kit»: пакет `indexnowkit/sitemap`, `Adapter\ConfigFactory`, фабрики, `Adapter\Services`, общие блоки адаптеров |
 | 20–25 | Python: core, Django, SQLAlchemy, FastAPI, Flask, Wagtail |
 | 30–39 | JS/TS: core, Prisma, TypeORM, Drizzle/Mongoose/Sequelize, Next, Nuxt, SvelteKit/RR7, NestJS, Payload, Strapi/Directus/Sanity |
 | 40–44 | Rails, Go, Spring Boot, .NET, прочее |
