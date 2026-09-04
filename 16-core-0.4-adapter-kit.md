@@ -1,6 +1,6 @@
 # 16. core 0.4 / 0.5 «adapter kit»: вынос sitemap, конфиг-фабрика, общие блоки адаптеров
 
-Статус: спецификация v2 (после адверсального ревью 2026-09-04); волна A выпущена 2026-09-05 (core 0.4.0), волна B реализована (core 0.5.0) — отклонения в разделах «Уточнения по реализации». Основание: аудит core 0.3.1 и четырёх
+Статус: спецификация v2 (после адверсального ревью 2026-09-04); волны A (core 0.4.0) и B (core 0.5.0) выпущены 2026-09-05, волна C (core 0.5.1, sitemap снова `suggest`) реализована 2026-09-05 — отклонения в разделах «Уточнения по реализации». Основание: аудит core 0.3.1 и четырёх
 адаптеров (Yii2 как контрольный «новый адаптер на готовом core»). Цель: авторинг адаптера с 6 до 9, API/тесты/документация
 с 8 до 9, без потери 9 по протоколу, надёжности и безопасности.
 
@@ -242,6 +242,44 @@ DoD волны C: `bin/ci` зелёный; в каждом адаптере те
 `sitemap` без warning'а, остальные команды работают); `grep -rn 'IndexNowKit\\Sitemap' packages/{symfony-bundle,laravel,yii2}/src`
 даёт только файлы, инстанцируемые за предикатом (список в спеке тем же коммитом); `composer.json` адаптеров без
 `indexnowkit/sitemap` в `require`; README/CHANGELOG обновлены; спека 12/13/15 и 91 синхронизированы.
+
+#### Уточнения по реализации (волна C, реализована 2026-09-05)
+
+Файлы, в которых встречается `IndexNowKit\Sitemap` (гейт §1.7), и почему каждый безопасен без пакета:
+
+| Адаптер | Файл | Почему безопасен |
+|---|---|---|
+| symfony-bundle | `DependencyInjection/SitemapServices.php` | предикат `installed()` (`class_exists` на `::class`-константе — автозагрузки нет), `configure()`/`register()` вызываются только при `installed` |
+| symfony-bundle | `Command/SitemapCommand.php` | сервис регистрируется только из `SitemapServices::register()` |
+| laravel | `Sitemap/SitemapSupport.php` | только `class_exists(\IndexNowKit\Sitemap\SitemapReader::class)` |
+| laravel | `Sitemap/SitemapServices.php` | `use` не грузит классы; `options()`/`register()` вызываются только при `installed` |
+| laravel | `Console/SitemapCommand.php` | регистрируется в artisan только через `SitemapServices::commands()` |
+| yii2 | `Sitemap/SitemapSupport.php` | только `class_exists(...)` |
+| yii2 | `Sitemap/SitemapServices.php` | статические методы, вызываются только при `installed` |
+| yii2 | `Console/SitemapAction.php` | `definition()`/`run()` — только при `installed` |
+| yii2 | `IndexNowComponent.php` | `use` для типов возврата `sitemapConfig(): SitemapConfig` / `sitemapSource(): SitemapSourceInterface`; оба метода бросают `LogicException` до обращения к типам, `checks()` создаёт `SitemapSpoolCheck` через `SitemapServices` только при `installed` |
+
+Отклонения от текста §1.5/§1.7:
+
+- Дефолт предиката в бандле: `?bool $sitemapInstalled = null` у `IndexNowKitBundle`, `IndexNowKitConfiguration` и
+  `IndexNowKitLoader` (null = `SitemapServices::installed()`); `bool = class_exists(...)` в сигнатуре PHP невозможен.
+  `IndexNowKitConfiguration::build()` стал методом экземпляра. Тесты: `new IndexNowKitBundle(sitemapInstalled: false)`
+  в `TestKernel` (варианты `nositemappkg`, `nositemappkgcfg`).
+- Бандл при `installed && !sitemap.enabled` сохраняет прежнее поведение (нет команды, есть `sitemap_config` и
+  `check.sitemap_spool`, который для disabled ничего не печатает), а не заглушку «not installed»: пакет-то установлен.
+  Заглушка и `check.sitemap_missing` — только при `!installed`.
+- Laravel: блок `sitemap` всегда присутствует в конфиге (пакетный `config/indexnow.php` через `mergeConfigFrom`),
+  поэтому вариант «block is ignored» печатается, когда блок отличается от пакетных дефолтов
+  (`SitemapSupport::checkLine($block, $defaults)`); совпадающий с дефолтами блок даёт простую строку.
+- Yii2: без пакета `IndexNowController::options('sitemap')` по-прежнему принимает опции команды (список
+  `SITEMAP_OPTIONS_WITHOUT_PACKAGE` зеркалит `Sitemap\Console\Definitions::sitemap()`), иначе cron с `--dry-run`
+  получал бы «Unknown option» вместо текста установки. Добавлен `IndexNowComponent::sitemapInstalled()`.
+- Заглушки печатают текст одной строкой `<error>…</error>` (не блоком `SymfonyStyle::error()`, который переносит
+  строки): лог cron'а ищет фразу grep'ом.
+- Предикат в Laravel/Yii2 — `SitemapSupport::$installed` типа `?bool` (null = определить, false/true = принудительно).
+- `ConfigFactory(ignoreBlocks:)` отвергает dotted-ключи `LogicException`'ом; голые имена блоков в `ownedOptions`
+  остаются задокументированным запретом без проверки в конструкторе (бандл передаёт все узлы дерева, включая
+  имена блоков, где `unknownOptions()` — no-op).
 
 ## 2. `Config` 0.4 и `Adapter\ConfigFactory` (волна A)
 

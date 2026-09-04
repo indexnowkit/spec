@@ -11,6 +11,7 @@ Symfony 6.4 LTS, 7.x. Тип `symfony-bundle`. Зависимости: `indexnow
 ```bash
 composer require indexnowkit/symfony-bundle
 composer require indexnowkit/doctrine     # автоотправка при изменении сущностей
+composer require indexnowkit/sitemap      # опционально: команда indexnow:sitemap (спека 16 §1.5)
 ```
 
 ```yaml
@@ -143,7 +144,10 @@ Symfony-only ноды поверх общей схемы 02: `messenger.{bus, tr
 `Console\SubmitterFactory` (`NullDebounceStore` и/или `Config::with(dryRun: true)`), не трогая сервис приложения.
 Вывод — таблица со столбцом `reason` либо JSON. Строки wiring в `indexnow:check` — `Check\WiringCheck` и
 `Sitemap\Check\SitemapSpoolCheck` пакета `indexnowkit/sitemap`, тегированные `indexnowkit.check`.
-`indexnow:submit-entity` и `indexnow:explain` регистрируются только при доступной Doctrine.
+`indexnow:submit-entity` и `indexnow:explain` регистрируются только при доступной Doctrine. `indexnowkit/sitemap` —
+`suggest` (бандл 0.6.0, спека 16 §1.5/§1.7): узел `sitemap` и сервисы строит `DependencyInjection\SitemapServices`
+только при установленном пакете; без него `indexnow:sitemap` — `SitemapNotInstalledCommand` (текст установки,
+exit 1), `check` печатает `sitemap: not installed (…)`, блок `sitemap` в yaml компилируется и игнорируется.
 
 `indexnow:explain` проходит весь путь решения одной сущности: правила → подписка на событие → `when` →
 `fields` → URL → нормализация → host/ключ/файл ключа → дебаунс. Ничего не отправляет.

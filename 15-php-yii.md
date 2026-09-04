@@ -193,7 +193,13 @@ retry.max_attempts` и ошибка ретраибельна; задержка �
 
 `QueueCheck` (компонент существует; `SyncQueue` — без ретраев), `Check\DebounceStoreCheck` core с `CacheProbe` (компонент дебаунса; core 0.4, раньше `CacheCheck`), `UrlManagerCheck`
 (`enablePrettyUrl` для файла ключа, правило добавлено), `ActiveRecordCheck` (behavior/`models` активны),
-`Sitemap\Check\SitemapSpoolCheck` пакета `indexnowkit/sitemap`.
+`Sitemap\Check\SitemapSpoolCheck` пакета `indexnowkit/sitemap`, а без него — `Check\StaticCheck` core со строкой
+`sitemap: not installed (…)`.
+
+`indexnowkit/sitemap` — `suggest` (yii2 0.4.0, спека 16 §1.5/§1.7): предикат `Sitemap\SitemapSupport::installed()`,
+sitemap-части в `Sitemap\SitemapServices` и `Console\SitemapAction`; без пакета `indexnow/sitemap` (опции
+по-прежнему принимаются) печатает текст установки и возвращает `ExitCode::FAILURE`, `sitemapConfig()`/`sitemapSource()`
+бросают `LogicException` с тем же текстом, блок `sitemap` в опциях игнорируется. Yii3 повторяет форму.
 
 ## `indexnowkit/yii3`
 

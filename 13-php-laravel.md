@@ -11,6 +11,7 @@ Laravel 12, 13 (13 требует PHP 8.3; 11 снят в 0.4.0 — вне secur
 
 ```bash
 composer require indexnowkit/laravel
+composer require indexnowkit/sitemap                  # опционально: команда indexnow:sitemap (спека 16 §1.5)
 php artisan vendor:publish --tag=indexnow-config      # config/indexnow.php
 php artisan indexnow:key:generate --write-env         # INDEXNOW_KEY в .env
 php artisan indexnow:check
@@ -197,7 +198,10 @@ binding'а или автоматически разрешимого класса
 `Console\SubjectLoaderInterface` ядра. `--force`/`--dry-run` собирают отдельный `Submitter`
 (`Console\SubmitterFactory`: `NullDebounceStore`, `Config::with(dryRun: true)`), не трогая сервис приложения.
 Строка про observer в `indexnow:check` — `Check\EloquentCheck`, spool — `Sitemap\Check\SitemapSpoolCheck` пакета `indexnowkit/sitemap`. Планировщик: `Schedule::command('indexnow:sitemap
---changed-since="1 day"')->daily()`.
+--changed-since="1 day"')->daily()`. `indexnowkit/sitemap` — `suggest` (laravel 0.7.0, спека 16 §1.5/§1.7): предикат
+`Sitemap\SitemapSupport::installed()`, binding'и в `Sitemap\SitemapServices` только при пакете; без него
+`indexnow:sitemap` — `Console\SitemapNotInstalledCommand` (текст установки, exit 1), `check` печатает `sitemap: not
+installed (…)`, блок `sitemap` в `config/indexnow.php` остаётся и игнорируется (`ConfigFactory(ignoreBlocks: ['sitemap'])`).
 
 ## Контейнер
 

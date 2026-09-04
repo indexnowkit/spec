@@ -82,7 +82,9 @@
 - Волна B спеки 16 — **выпущена 2026-09-05**: core 0.5.0, sitemap 0.1.1, doctrine 0.3.1, symfony-bundle 0.5.0, laravel 0.6.0,
   yii2 0.3.0 на Packagist (additive в core): `Adapter\ServicesBuilder`/`Services` (Yii2 на них), `Hook\ObserverHelper`,
   `Retry\WorkerOutcome`, `Console\Definitions`, `Testing\KeyFileAssertions`/`CheckOutputAssertions`, coverage-floor в CI.
-  Yii3 и Битрикс — следующие (спека 15, core 0.5 как база).
+- Волна C спеки 16 — **реализована 2026-09-05, релиз по подтверждению**: core 0.5.1, symfony-bundle 0.6.0, laravel 0.7.0, yii2 0.4.0:
+  `indexnowkit/sitemap` снова `suggest` в адаптерах (`Check\StaticCheck`, `ConfigFactory(ignoreBlocks:)`, заглушка
+  команды, sitemap-проводка за предикатом). Yii3 и Битрикс — следующие (спека 15, core 0.5 как база).
 
 ## Открытые решения
 
