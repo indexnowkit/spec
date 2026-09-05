@@ -14,7 +14,7 @@ keywords, одинаковый README, взаимные ссылки между 
 Одна строка о том, что делает. Бейджи: version, downloads, CI, conformance, license.
 
 ## Кто получит уведомление
-Yandex, Bing (и DuckDuckGo через Bing), Naver, Seznam, Yep. Google: нет, протокол Google
+Yandex, Bing (и DuckDuckGo через Bing), Naver, Seznam, Yep, Internet Archive, Amazon. Google: нет, протокол Google
 не поддерживает (ссылка на FAQ). Честность здесь = доверие.
 
 ## Установка (3 команды максимум)

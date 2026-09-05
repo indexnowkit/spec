@@ -1,25 +1,43 @@
 # 01. Протокол IndexNow и политика обработки ответов
 
 Источники: https://www.indexnow.org/documentation, https://yandex.ru/support/webmaster/ru/indexnow/reference,
-https://www.indexnow.org/searchengines. Проверено 2026-09-03.
+https://www.indexnow.org/searchengines.json (реестр участников; `api.indexnow.org/searchengines.json` в момент
+снимка отдавал страницу недоступности Bing) и `meta.json` каждого участника. Снимок 2026-09-05.
 
 ## Endpoint'ы
 
-| Endpoint | Роль |
-|---|---|
-| `https://api.indexnow.org/indexnow` | Общий. Раздаёт всем участникам. **Дефолт для всех пакетов.** |
-| `https://yandex.com/indexnow` | Yandex напрямую |
-| `https://www.bing.com/indexnow` | Bing напрямую |
-| `https://searchadvisor.naver.com/indexnow` | Naver |
-| `https://search.seznam.cz/indexnow` | Seznam |
-| `https://indexnow.yep.com/indexnow` | Yep |
+| Engine (`Engine::*`, id реестра) | Endpoint (`api` из meta.json) | Роль |
+|---|---|---|
+| `api` | `https://api.indexnow.org/indexnow` | Общий. Раздаёт всем участникам. **Дефолт для всех пакетов.** |
+| `yandex` | `https://yandex.com/indexnow` | Yandex напрямую. `www.yandex.com` отвечает так же (422 на пустое тело, без редиректа) — решение §10.3 спеки 17: оставить `yandex.com` |
+| `bing` | `https://www.bing.com/indexnow` | Bing напрямую |
+| `naver` | `https://searchadvisor.naver.com/indexnow` | Naver |
+| `seznam` | `https://search.seznam.cz/indexnow` | Seznam |
+| `yep` | `https://indexnow.yep.com/indexnow` | Yep |
+| `internetarchive` | `https://internetarchive.indexnow.org/indexnow` | Internet Archive (Wayback Machine). Объявлен в его meta.json; на 2026-09-05 хост не резолвится (NXDOMAIN у авторитетных NS `indexnow.org`) — достижим через `api` |
+| `amazon` (реестр: `amazonbot`) | `https://indexnow.amazonbot.amazon/indexnow` | Amazonbot; на пустое тело отвечает 400 |
+
+Снимок `searchengines.json` (2026-09-05):
+
+```json
+{
+    "bing": "https://www.bing.com/indexnow/meta.json",
+    "yandex": "https://www.yandex.com/indexnow/meta.json",
+    "seznam": "https://search.seznam.cz/indexnow/meta.json",
+    "naver": "https://searchadvisor.naver.com/indexnow/meta.json",
+    "yep": "https://indexnow.yep.com/indexnow/meta.json",
+    "internetarchive": "https://web-static.archive.org/indexnow/meta.json",
+    "amazonbot": "https://indexnow.amazonbot.amazon/indexnow/meta.json"
+}
+```
 
 Участники обязаны делиться полученными URL между собой, поэтому одного POST на
 `api.indexnow.org` достаточно. Список endpoint'ов в core объявляется как enum/константы
 `Engine`, конфигурация `engines: ['api']` по умолчанию, можно перечислить несколько
-(тогда один и тот же батч отправляется в каждый).
+(тогда один и тот же батч отправляется в каждый). Новый участник реестра — новый case `Engine`
+минором (`bc.md`: рост enum разрешён).
 
-Google не участник. Amazon указан участником, но публичного endpoint не публикует.
+Google не участник.
 
 ## Запросы
 
