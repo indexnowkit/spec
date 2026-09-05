@@ -98,7 +98,13 @@
   `CacheProbe`, узел `dry_run` без дефолта), laravel 0.8.0 (`env('INDEXNOW_DRY_RUN')` без каста, 12 | 13), yii2 0.6.0,
   doctrine 0.4.0, sitemap 0.2.0 (Psalm taint по расписанию); README-дефекты, «Why this over X», «≠ индексация»,
   `docs/bc.md` адаптеров; `bin/packagist-check`, Dependabot, `composer audit`, `roave/security-advisories`, шаблоны
-  issue/PR, CoC, SECURITY SLA, бейджи. Уточнения реализации — спека 17 §11. Дальше: 0b (доки) параллельно с D.
+  issue/PR, CoC, SECURITY SLA, бейджи. Уточнения реализации — спека 17 §11.
+- Спека 17, волна 0b — **выполнена 2026-09-05** (без релизов; доки уедут патчами адаптеров): «Notes for AI assistants» ×6
+  + `ReadmeAiNotesTest`, `AGENTS.md`, Boost-guideline, `.phpstorm.meta.php`, `context7.json`; quickstart-фикстуры
+  `tests/Readme/Post.php` ×3 + `ReadmeQuickstartTest`; `bin/config-table` + «One concept, three keys»; docs-сайт
+  (`bin/docs-collect`, MkDocs Material, `docs.yml`, lychee, `llms.txt`); prod checklist, SEO-тексты, антипаттерны,
+  мониторинг; Yii2-паритет (configuration/testing/multi-domain/troubleshooting); RU ×5. Уточнения — спека 17 §12.
+  Осталось пользователю: включить Pages, submit в Context7, внешний проход quickstart Yii2. Дальше: D (core 0.7.0).
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
