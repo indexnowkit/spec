@@ -1,7 +1,7 @@
 # 17. Семейство PHP к 1.0: состав core, DX, UX, SEO, дистрибуция
 
-Статус: спецификация v2 (после двух адверсальных ревью 2026-09-05: реализуемость — 33 находки, дизайн — 60), не
-реализовано. Основание: пять аудитов по линзам «состав core», «DX разработчика и AI-ассистента», «UX владельца сайта»,
+Статус: спецификация v2 (после двух адверсальных ревью 2026-09-05: реализуемость — 33 находки, дизайн — 60). Волна 0a +
+hotfix выполнена 2026-09-05 (§11); 0b, D, E, F не начаты. Основание: пять аудитов по линзам «состав core», «DX разработчика и AI-ассистента», «UX владельца сайта»,
 «SEO-корректность», «дистрибуция». Исходное состояние: core 0.5.1, sitemap 0.1.1, doctrine 0.3.1, symfony-bundle 0.6.1,
 laravel 0.7.0, yii2 0.5.0.
 
@@ -495,3 +495,41 @@ F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в
 7. Dependabot с `groups` (дефолт) или Renovate (GitHub App).
 8. Codecov (живой процент, сторонний сервис) или статический бейдж порога (дефолт).
 9. Спонсорство: не заводить (дефолт).
+
+## 11. Уточнения по реализации (0a, 2026-09-05)
+
+Отклонения от §2, принятые при реализации, с причинами:
+
+1. **`dryRunExplicit` и `null`.** `fromArray()` считает `dry_run` явным только при ненулевом значении:
+   `($data['dry_run'] ?? null) !== null`, а не `array_key_exists`. Причина: конфиг-файлы читают env-переменные,
+   которых может не быть (`env('INDEXNOW_DRY_RUN')` в Laravel даёт `null`), и `array_key_exists` делал бы любой
+   такой файл «явным». Следствия в адаптерах: узел `dry_run` дерева бандла без `defaultFalse()` (обработанное дерево
+   не должно выдумывать явный `false`); `config/indexnow.php` Laravel читает `env('INDEXNOW_DRY_RUN')` без каста —
+   опубликованный до 0.8.0 файл с `(bool) env(..., false)` даёт warning вместо error, пока не переопубликован
+   (в CHANGELOG).
+2. **`with()`** делает копию явной только при изменении `dryRun`; прочие изменения сохраняют флаг (копия с другими
+   движками — не решение о dry_run). `withDryRun()` — как в §2.1. Конструктор: `true` по умолчанию (код — явное решение).
+3. **Строка `environment`**: `ok` в production и в non-production, когда ничего не уходит (`dry_run`/`enabled: false`);
+   `warning` в non-production, когда отправка идёт (оба состояния «error» и «explicit warning»). Ключ в тексте —
+   `KeyValidator::mask()`; при `hosts` без `key` — «the keys of N host(s)».
+4. **Фикстуры адаптеров** получили явный `dry_run: false`: их окружения (`test`/`testing`) не production, иначе каждый
+   `check`-тест был бы красным. Staging-тест каждого адаптера снимает ключ через `dry_run: null`.
+5. **`Engine::InternetArchive`** объявлен по meta.json, но хост `internetarchive.indexnow.org` на 2026-09-05 не
+   резолвится (NXDOMAIN у авторитетных NS `indexnow.org`); документировано как «достижим через `api`». Значение
+   `amazon` оставлено при id реестра `amazonbot`. `api.indexnow.org/searchengines.json` отдавал страницу недоступности
+   Bing; снимок взят с `www.indexnow.org/searchengines.json` (спека 01). Яндекс: оба хоста отвечают 422 без редиректа —
+   `yandex.com` остаётся (§10.3 закрыт).
+6. **Тексты ошибок**: адреса §2.2 указывали на строки до правок; `Config.php:192/198/214` — это `resolver`,
+   `debounce.key_prefix`, `retry`. `Checker` печатает первые 60 байт тела (управляющие символы схлопнуты, ключ маскируется).
+7. **`DebounceStoreCheck` в бандле**: probe-ключ `indexnowkit_check` (двоеточие — зарезервированный PSR-6 символ,
+   `Psr16Cache` бросает); closure для core-проверки — сервис `Closure::fromCallable` над `Check\CacheProbe`,
+   регистрируется только когда `debounce.store` — пул. `ContainerShapeTest` перегенерирован.
+8. **`bin/packagist-check`** вызывается в конце `bin/tag` информационно (`|| true`): в момент тега сплит и Packagist ещё
+   не видят версию; строгий режим — `--strict` после `packagist-wait`.
+9. **Psalm taint** для sitemap: `packages/sitemap/psalm.xml` (errorLevel 4), workflow `psalm-taint.yml` по понедельникам и
+   вручную; Psalm ставится глобально в джобе, не в `require-dev`. Первый прогон — 0 находок.
+10. **Спека 90** упоминаний спонсорства не содержала — удалять нечего.
+11. **Бейдж coverage** только у core и sitemap (у остальных пакетов нет coverage-джоба и floor'а); порядок бейджей
+    единый, RU-README тоже.
+12. **SEO-тексты §3.3 без кода** сделаны в 0a: «≠ индексация», BWT/Я.Вебмастер, 410/404/301, Bing URL Submission API,
+    полный sitemap-прогон и `lastmod` — в README; `operations.md`/`attribute-reference.md` — остаются в 0b.
