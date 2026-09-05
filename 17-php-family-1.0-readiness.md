@@ -561,4 +561,10 @@ F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в
    Sentry — `operations.md`; антипаттерны — `attribute-reference.md`; hreflang/www-apex — `multi-domain.md` трёх
    адаптеров (у Yii2 документ новый). Код для warning полного sitemap-прогона — волна E, как в спеке.
 7. **RU-перевод** — пять документов по дефолту §10.5; генерируемая таблица ключей остаётся в EN-файле, RU ссылается.
-8. Внешний проход quickstart Yii2 свежей сессией — не выполнялся в этой сессии (гейт §9 остаётся за пользователем).
+8. **Внешний проход quickstart Yii2** выполнен свежим агентом в `yii2-app-basic` (Docker, Packagist 0.6.0): три
+   блокера и три ловушки исправлены в README EN/RU — установка сразу с PSR-18 клиентом; `'dry_run' => YII_ENV_DEV` в
+   Install-сниппете; Yii2 не читает `.env` (export / phpdotenv); `urlManager` и компонент в обоих конфигах
+   (`web.php`/`console.php` независимы в app-basic); имена классов в командах в кавычках (`'app\models\Post'` —
+   shell съедает обратные слэши; то же в README бандла/Laravel); `namespace app\models`, колонки модели и
+   иллюстративность `Category` — текстом перед golden-блоком. Pages включён (`gh api … /pages -f build_type=workflow`),
+   сайт опубликован, `homepage` в composer.json и на GitHub → сайт.
