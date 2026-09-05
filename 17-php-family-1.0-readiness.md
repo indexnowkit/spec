@@ -1,7 +1,7 @@
 # 17. Семейство PHP к 1.0: состав core, DX, UX, SEO, дистрибуция
 
 Статус: спецификация v2 (после двух адверсальных ревью 2026-09-05: реализуемость — 33 находки, дизайн — 60). Волны 0a + hotfix,
-0b и D выполнены 2026-09-05 (§11, §12, §13), E — 2026-09-06 (§14); F не начата. Основание: пять аудитов по линзам «состав core», «DX разработчика и AI-ассистента», «UX владельца сайта»,
+0b и D выполнены 2026-09-05 (§11, §12, §13), E и F — 2026-09-06 (§14, §15; релиз F — по задаче 14 промпта волны). Основание: пять аудитов по линзам «состав core», «DX разработчика и AI-ассистента», «UX владельца сайта»,
 «SEO-корректность», «дистрибуция». Исходное состояние: core 0.5.1, sitemap 0.1.1, doctrine 0.3.1, symfony-bundle 0.6.1,
 laravel 0.7.0, yii2 0.5.0.
 
@@ -37,7 +37,7 @@ AI-ассистента) и владельцу сайта/SEO-специалис
 | 0b | — | §3: документация, AI-артефакты, docs-сайт, RU, паритет Yii2 | недели, параллельно с D/E | нулевой |
 | D | **0.7.0** | §4: пакеты `testing`, `console`; `Adapter\OptionalPackage`; перемещения | дни | низкий (механика) |
 | E | **0.8.0** | §5: `check --json/--strict` и новые проверки, ротация, счётчик 403, `SubmissionStoreInterface`, канонизация, `Condition`, `config --json` | 1–2 недели | средний |
-| F | — | §6: `verify` 0.1.0, затем `history` 0.1.0 | после E | изолирован |
+| F | **0.9.0** (аддитивно) | §6: `verify` 0.1.0, затем `history` 0.1.0 — **выполнена 2026-09-06** (§15) | после E | изолирован |
 | 1.0 | 0.9 → 1.0 | §7: один минор без breaking, критерии выполнены | — | — |
 
 ## 1. Целевая карта пакетов
@@ -664,3 +664,68 @@ F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в
 12. **Warning полного sitemap-прогона** — после сводки, при `--json` в stderr; порог — строго больше `batch.max_urls`.
 13. **Тесты адаптеров**: `--host` теперь делает два GET на хост (ключевой файл и robots.txt); `explain` печатает
     `when: published (false) -> false`; фикстуры без блока `queue` — секция `adapter` показывает `router`/`sitemap`.
+
+## 15. Уточнения по реализации (F, 2026-09-06)
+
+Отклонения от §6 и от промпта волны, принятые при реализации, с причинами:
+
+1. **`Retry\ForbiddenCounter::__construct(?CacheInterface $cache, string $keyPrefix, int $threshold, int $ttl = TTL, LoggerInterface $logger = NullLogger)`** —
+   `threshold` раньше `ttl` (обязательный параметр не может идти после необязательного). Ключи
+   `<prefix>403.<host>[_escalated]`. `Services::forbiddenCounter()` строит его из существующих узлов; сигнатура `Client`
+   не менялась, тесты `Client` про 403 не тронуты.
+2. **Core 0.9.0 кроме `ForbiddenCounter`** получил аддитивный `$extraHeaders` в `TransportFactory::lazy(Config, ?Closure,
+   array $extraHeaders = [])` и `Psr18Transport::discover(?ClientInterface, ?float, array $extraHeaders = [])` —
+   единственный способ дать User-Agent GET-ам verify без изменения `TransportInterface::get()`.
+3. **`VerifyingSubmitter(SubmitterInterface $inner, TransportInterface $transport, VerifyConfig $config, KeyProviderInterface $keys, UrlNormalizerInterface $normalizer, LoggerInterface $logger = NullLogger, ?EventDispatcherInterface $events = null, ?SubmissionStoreInterface $store = null, ?RobotsCache $robots = null, ?ClockInterface $clock = null, bool $inWebRequest = false, ?Closure $sleep = null)`** —
+   `KeyProviderInterface` вместо списка хостов, `RobotsCache` вместо `?CacheInterface`. Критерий «чужой хост»:
+   `managedHosts()`, если перечислимы, иначе `keyFor()`.
+4. **`PageSignals`** ~185 строк + `UrlReference` (RFC 3986 resolve), regex-парсер `<head>`, без `ext-dom`; `MAX_BYTES`
+   262 144.
+5. **`verify` не зависит от `console`**; `SampleCheck` — `CheckInterface` с замыканием-сэмплером класса из адаптера; опции
+   `--sample`/`--sample-class` попадают в проверку через адаптерный holder `SampleOptions` + `VerifySampleCheck` (в каждом
+   адаптере свой sampler: `EntitySampler`, `ModelSampler`, `RecordSampler`).
+6. **`VerifyingSubmitterFactory`** (декоратор `SubmitterFactoryInterface`, `inner()` для sitemap без предпроверки); флаг
+   sitemap — `no-verify` (`SitemapOptions(..., bool $noVerify)`, `SitemapRunner(..., ?SubmitterFactoryInterface $unverifiedSubmitters)`).
+7. **`ConfigRunner::run(..., array $packages = [])`** — эффективные значения блоков (`toArray()`), а не `OPTIONS`.
+8. **Политики verify**: robots 404 — «нет robots», без записи в лог; `origin_error: send` пишет warning; `non_canonical:
+   replace` публикует skipped `NonCanonical` «submitted instead» для исходного URL и отправляет canonical; `redirect:
+   follow` — 301/308 дают оба URL (исходный + цель), 302/303/307 — только исходный.
+9. **`verify.dispatch`** — warning только при `dispatch: sync`. Кода **`verify.config` нет**: невалидный блок `verify`
+   логируется `critical` в `VerifyConfig::loadOrDisabled()` и предпроверка выключена (в бандле блок отвергается деревом
+   при компиляции); `check` печатает `verify.installed`, `verify.dispatch`, `verify.sample`.
+10. **Yii2**: свойства компонента `verifyInstalled`, `verifyTransport`, `samples`, `historyInstalled`; методы `events()`,
+    `historyPackage()/historyInstalled()/historyConfig()/historyEnabled()`.
+11. **history**: `RecordCodec` (@internal), `Psr16SubmissionStore` — кольцевой буфер `history.index` + слоты
+    `history.<n>`; `PdoSubmissionStore` — строка на URL, группировка по 26-символьному batch id; `--since` принимает
+    `m/h/d/w`; `HistoryRunner(SubmissionStoreInterface, HistoryConfig, ?UrlNormalizerInterface, ?ClockInterface)`,
+    `StatusRunner(Config, KeyProviderInterface, ForbiddenCounter, string $debounceStore, ?SubmissionStoreInterface, ?Closure $adapterFacts, ?ClockInterface)`.
+12. **`HistoryConfig`** отвергает `pdo.dsn` вместе с `pdo.service` (одно правило на три адаптера; бандл дублирует его в
+    дереве). `HistoryCheck`, `StatusRunner` и `HistoryRunner` считают `NullSubmissionStore` ядра «стором нет» — адаптеры
+    передают свой стор как есть, пользовательский стор виден как `custom`.
+13. **Маркер `OptionalPackage` для history — `HistoryConfig::class`**, не `HistoryStoreInterface`: предикат —
+    `class_exists()`, который для интерфейса возвращает false.
+14. **Подстановка стора в адаптерах**: бандл — `indexnowkit.submission_store` становится стором пакета (алиас
+    `indexnowkit.history.store`), сервис приложения под тем же id по-прежнему побеждает (MergeExtensionConfigurationPass);
+    Laravel — `extend()` binding'а `SubmissionStoreInterface`, который заменяет только `NullSubmissionStore`; Yii2 —
+    узел `ServicesBuilder::submissionStore()` при `historyEnabled()` (свойство `submissionStore` компонента имеет
+    приоритет). `pdo.service`: бандл — имя DBAL-соединения (`default` → `doctrine.dbal.default_connection`) или id
+    сервиса (`getNativeConnection()` либо готовый `PDO`); Laravel — `DB::connection($name)->getPdo()`; Yii2 —
+    `Connection::getMasterPdo()` компонента `db`. `psr16`: PSR-16-вид пула дебаунса (при `memory`/`none` — `cache.app`
+    / стор кэша по умолчанию / компонент `cache`).
+15. **`status`**: `$debounceStore` — `cache.app (ArrayAdapter)` в бандле, `cache (array)` в Laravel, `cache (ArrayCache)`
+    в Yii2, `memory`/`none` как есть; `$adapterFacts` — бандл `transport` (сконфигурированный, либо «routed by
+    framework.messenger.routing», либо «none: handled synchronously (set messenger.transport)») и `bus`; Laravel
+    `connection` и `queue` (дефолты приложения, когда блок `queue` их не задаёт); Yii2 `component` и `class`.
+16. **Заглушки без пакета**: бандл и Laravel — `HistoryNotInstalledCommand`/`StatusNotInstalledCommand` (exit 1, строка
+    установки); Yii2 — действия `indexnow/history` и `indexnow/status` существуют всегда (как `indexnow/sitemap`),
+    без пакета печатают строку установки и exit 1, их опции принимаются (`help` показывает действия — убрать их из
+    списка Yii не позволяет без переопределения `actions()`).
+17. **`--purge`** в трёх CLI: Symfony `VALUE_OPTIONAL` с дефолтом `false` (absent) → `null`/`true`/строка; Laravel
+    `{--purge=}` + `hasParameterOption('--purge')`; Yii2 — свойство `purge` (`true` без значения, строка с `=`).
+    `--host` у Yii2 переиспользует массивную опцию `check` и берёт первое значение; `--limit` без явного значения — 50.
+18. **Профилер бандла**: `IndexNowDataCollector` — седьмой параметр `?SubmissionStoreInterface $history = null`,
+    `lateCollect()` читает `recent(20)`; ошибка стора — одна строка панели. Laravel `about`: строка `History`
+    (`pdo (indexnow_submissions), 1 240 records` / `psr16 (500 records kept), …` / `off (history.store)` /
+    `custom (<class>)` / `…, store failed: <message>`).
+19. **phpstan бандла** сканирует `ContainerConfigurator.php` (`scanFiles`): статическая рефлексия находит функции
+    `service()`/`service_closure()` только в загруженном файле, и с ростом числа файлов порядок воркеров стал это ломать.

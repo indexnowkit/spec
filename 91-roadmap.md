@@ -119,6 +119,15 @@
   прогона), doctrine 0.6.0, symfony-bundle 0.9.0, laravel 0.10.0 (события Laravel, `about`), yii2 0.8.0
   (`EVENT_RESULT`, `-v/-vv/-vvv`). Уточнения — спека 17 §14. Дальше: F (`verify` 0.1.0, `history` 0.1.0), затем 0.9 без
   breaking → 1.0.
+- 2026-09-06: волна F спеки 17 выполнена (релиз — по задаче 14 промпта волны): `indexnowkit/verify` 0.1.0
+  (`VerifyingSubmitter` — декоратор сабмиттера адаптера: noindex, robots.txt, canonical, редиректы, ошибки origin;
+  `check --sample`; `sitemap --no-verify`), `indexnowkit/history` 0.1.0 (`Psr16SubmissionStore`, `PdoSubmissionStore`,
+  команды `history`/`status`, строки `check`, вкладка профилера), core 0.9.0 **только аддитивно** (`Retry\ForbiddenCounter`,
+  `$extraHeaders` у транспортных фабрик) — «минор 0.9 без breaking» из §7 выполнен; console 0.3.0, testing 0.2.0
+  (кит S01–S08), sitemap 0.5.0, doctrine 0.7.0, symfony-bundle 0.10.0, laravel 0.11.0, yii2 0.9.0 (проводка обоих
+  пакетов за `OptionalPackage`). Уточнения — спека 17 §15. Дальше: 1.0 по §7 (`ParamExtractor::registerReader()`,
+  критерий формы `Services` с Yii3, `UPGRADE.md`, ноль `@deprecated`, `compatibility.md`, замороженные идентификаторы
+  conformance — теперь и S01–S08). Yii3/Битрикс после.
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
