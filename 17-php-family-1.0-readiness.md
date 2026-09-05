@@ -533,3 +533,6 @@ F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в
     единый, RU-README тоже.
 12. **SEO-тексты §3.3 без кода** сделаны в 0a: «≠ индексация», BWT/Я.Вебмастер, 410/404/301, Bing URL Submission API,
     полный sitemap-прогон и `lastmod` — в README; `operations.md`/`attribute-reference.md` — остаются в 0b.
+13. **`bin/packagist-check` читает HTML-страницу пакета**, не `packages/<pkg>.json`: у JSON-API `s-maxage=43200`
+    (12 часов CDN), после «Update» он ещё полдня отдаёт старую версию, а HTML обновляется сразу. §2.4 говорил про
+    `packages/*.json` — заменено.
