@@ -1,7 +1,7 @@
 # 17. Семейство PHP к 1.0: состав core, DX, UX, SEO, дистрибуция
 
 Статус: спецификация v2 (после двух адверсальных ревью 2026-09-05: реализуемость — 33 находки, дизайн — 60). Волны 0a + hotfix,
-0b и D выполнены 2026-09-05 (§11, §12, §13); E, F не начаты. Основание: пять аудитов по линзам «состав core», «DX разработчика и AI-ассистента», «UX владельца сайта»,
+0b и D выполнены 2026-09-05 (§11, §12, §13), E — 2026-09-06 (§14); F не начата. Основание: пять аудитов по линзам «состав core», «DX разработчика и AI-ассистента», «UX владельца сайта»,
 «SEO-корректность», «дистрибуция». Исходное состояние: core 0.5.1, sitemap 0.1.1, doctrine 0.3.1, symfony-bundle 0.6.1,
 laravel 0.7.0, yii2 0.5.0.
 
@@ -607,3 +607,60 @@ F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в
    `require-dev`/`suggest`, бандл — `doctrine ^0.5`; branch-alias подняты до релизных (0.7.x/0.1.x/0.1.x/0.3.x/0.5.x/
    0.8.x/0.9.x/0.7.x) до тега — `bin/link` разрешает соседей по алиасу.
 
+
+## 14. Уточнения по реализации (E, 2026-09-06)
+
+Отклонения от §5, принятые при реализации, с причинами:
+
+1. **`--host` многократный без смены `CheckerInterface`.** `CheckerInterface::run(bool, ?string $onlyHost, ?string)` не
+   тронут (tier «may grow», но расширение типа параметра ломает сторонние реализации без выигрыша): `CheckRunner`
+   принимает `string|list<string>|null $host`, при нескольких хостах гоняет чекер по одному разу на хост и сливает
+   отчёты — глобальные строки один раз, строки хостов по каждому. Адаптерные проверки при этом выполняются N раз
+   (диагностика, N мал). Yii2: массив-свойство `host`, `--host=a,b` (Yii не поддерживает повтор опции).
+2. **Схема JSON валидируется `justinrainbow/json-schema ^6.0`** в `require-dev` console (единственный тест); в
+   `require` пакета зависимостей не добавилось. `items[].code` допускает `null` для проверок приложения без кода;
+   при невалидной конфигурации `--json` печатает документ с одним item `config.invalid`.
+3. **Коды `check`** (`core/docs/check-codes.md`): `next` в отчёт не попал — строка «Next: …» печатается `CheckRunner`
+   после отчёта и в JSON не входит. `key_file.status` — ok для совпавшего файла, error при статусе ≠ 200; несовпавшее
+   тело — отдельный `key_file.body`; транспортная ошибка и отсутствие клиента — `key_file.fetch`.
+4. **`Content-Type` без заголовка при доступных заголовках — warning, не ok**: спека предписывала ok только для
+   транспорта, который заголовков не отдаёт (`Response::$headers === []`, одна нейтральная строка); реально
+   отсутствующий заголовок при отдаваемых остальных — реальный недостаток сервера. Проверки заголовков идут только
+   после совпавшего ключевого файла; `Cache-Control` без заголовка — строки нет; `Age` > лимита — отдельный текст про
+   CDN. `robots.txt` разбирается по группам `User-agent` (`*` и боты движков; Googlebot игнорируется), «длиннейшее
+   правило побеждает, Allow при равенстве»; 404/ошибка robots — молчание. `previous_key` берётся из
+   `hosts.<host>.previous_key ?? previous_key`, ключ маскируется.
+5. **Ключи счётчика 403** — `<debounce.key_prefix>403.<host>` и `…_escalated`, не `indexnow:403:{host}`: двоеточие —
+   зарезервированный PSR-6 символ, `Psr16Cache` бандла бросает (тот же урок, что §11.7). Эскалация в кэше — флаг рядом со
+   счётчиком; при `increment()` свежий счётчик получает TTL отдельным `set`; исключение кэша логируется один раз
+   (`warning`), процесс считает сам. Yii2 получил `Cache\Psr16Cache` над `yii\caching\CacheInterface` (у Yii нет
+   PSR-16); в Laravel — `Cache::store()` (уже PSR-16, с `increment()`); при `debounce.store: memory|none` кэш не
+   передаётся. `IndexNowKit::create()` получил `failureCache:` и `submissionStore:` (тринадцатый и четырнадцатый аргумент).
+6. **`SubmissionStoreInterface`**: запись после листенеров и PSR-14, одно время `now()` на вызов `submit()`; dry-run
+   результат несёт движок (`engine: api`), а не `NO_ENGINE`, — так `Client` строит `Result::skipped(...)` при dry_run
+   с волны 0a; `NO_ENGINE` — у `disabled`/`debounced`/`no_key`/`invalid_url`. Документ — `core/docs/submission-store.md`.
+7. **Канонизация**: `Checker::hostsToCheck()` тоже через фабрику (гейт grep). `trailing_slash: add` не трогает путь,
+   последний сегмент которого содержит точку (файл), `strip` не трогает корень. `sort_query` — стабильная сортировка по
+   имени (одинаковые имена сохраняют порядок). Значения параметров и их кодирование не меняются; сравнение имён —
+   после `rawurldecode`, без учёта регистра. Дерево бандла получило узел `normalizer`, Laravel — блок в
+   `config/indexnow.php`.
+8. **`Condition`**: тип `when` — `string|Condition|Closure|null`, `ParamValue` (`Accessor`, `Value`, …) в `when` больше
+   не принимается (TypeError; миграция `new Accessor('x')` → `'x'`). `Equals` в `params` — `ConfigurationException` из
+   `ParamExtractor::extract()` с текстом, куда его положить. `.phpstorm.meta.php` не менялся: `when` не закрытое
+   множество, подсказывать нечего. `explain` печатает значение каждого условия (`status ("draft") -> true — …`);
+   `explain --json` — документ `class/id/event/config/rules[]/delivery[]/submits`.
+9. **`indexnow:config`**: `Config::toArray()` в core (эффективная конфигурация в форме `fromArray()`, без маскировки);
+   `ConfigRunner` маскирует `key`, `previous_key` и ключи `hosts`, добавляет секцию `adapter` (ключи сырой конфигурации,
+   которых нет в `Config::OPTIONS`, как есть), `endpoints` и `core` (версия). Описание опции `--json` без фигурных
+   скобок: парсер `$signature` Laravel считает `{` границей аргумента.
+10. **PSR-14**: у Yii2 не было `EVENT_RESULT` (инвентарь ошибался) — добавлены `IndexNowComponent::EVENT_RESULT`,
+    `Event\ResultEvent`, `Event\ResultDispatcher`; консольные сабмиттеры Yii2 берутся из
+    `Services::submitterFactory()`, чтобы публиковать в тот же диспетчер и писать в тот же стор. Yii2 `-v/-vv/-vvv` —
+    три булевых опции контроллера (`v`, `vv`, `vvv`; Yii не различает повторы одной буквы), плюс `SHELL_VERBOSITY`;
+    `--verbose` удалён (Changed). Laravel: мост `Event\EventDispatcherBridge` под id `IndexNowKitServiceProvider::EVENTS`,
+    секция `about` — версия core, enabled/dry_run, окружение, base_url, маскированный ключ, движки, dispatch, debounce.
+11. **`Reason`**: добавлен `isRetryable()` (у enum не было понятия retryable; таблица в `bc.md` — по нему). Всего 17
+    кейсов.
+12. **Warning полного sitemap-прогона** — после сводки, при `--json` в stderr; порог — строго больше `batch.max_urls`.
+13. **Тесты адаптеров**: `--host` теперь делает два GET на хост (ключевой файл и robots.txt); `explain` печатает
+    `when: published (false) -> false`; фикстуры без блока `queue` — секция `adapter` показывает `router`/`sitemap`.

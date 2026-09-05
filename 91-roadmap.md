@@ -112,6 +112,13 @@
   требует console), doctrine 0.5.0, symfony-bundle 0.8.0, laravel 0.9.0, yii2 0.7.0 (`SitemapSupport` удалены,
   предикат — `OptionalPackage`; доки 0b уехали с этими релизами). split.yml в четыре стадии. Уточнения — спека 17 §13.
   Дальше: E (core 0.8.0).
+- 2026-09-06: волна E спеки 17 выпущена — core 0.8.0 (`check` как healthcheck: коды `CheckItem::$code`, новые проверки
+  заголовков/robots/previous_key, `Response::$headers`; счётчик 403 в PSR-16; `SubmissionStoreInterface`; канонизация
+  `normalizer.*`; `Condition`/`FieldCondition`; `Reason` для verify), console 0.2.0 (`check --json/--strict/--host*`,
+  `config --json`, `explain --json`, ротация с `INDEXNOW_PREVIOUS_KEY`), testing 0.1.1, sitemap 0.4.0 (warning полного
+  прогона), doctrine 0.6.0, symfony-bundle 0.9.0, laravel 0.10.0 (события Laravel, `about`), yii2 0.8.0
+  (`EVENT_RESULT`, `-v/-vv/-vvv`). Уточнения — спека 17 §14. Дальше: F (`verify` 0.1.0, `history` 0.1.0), затем 0.9 без
+  breaking → 1.0.
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
