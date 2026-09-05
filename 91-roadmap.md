@@ -104,7 +104,14 @@
   `tests/Readme/Post.php` ×3 + `ReadmeQuickstartTest`; `bin/config-table` + «One concept, three keys»; docs-сайт
   (`bin/docs-collect`, MkDocs Material, `docs.yml`, lychee, `llms.txt`); prod checklist, SEO-тексты, антипаттерны,
   мониторинг; Yii2-паритет (configuration/testing/multi-domain/troubleshooting); RU ×5. Уточнения — спека 17 §12.
-  Осталось пользователю: включить Pages, submit в Context7, внешний проход quickstart Yii2. Дальше: D (core 0.7.0).
+  Осталось пользователю: submit в Context7. Pages и внешний проход quickstart Yii2 сделаны.
+- Спека 17, волна D — **выполнена 2026-09-05**: core 0.7.0 (`Console\SubmitterFactory*` → `Adapter\`, `Console\ResultSummary`
+  → `Submission\`, `Adapter\OptionalPackage`; ноль `Symfony\Component\Console\`/`PHPUnit\` в `src/`, 106 файлов),
+  testing 0.1.0 (киты C/A, ассерции H01–H05 и `ReadmeAssertions` как `Testing\Conformance\*`, mock-server в
+  `resources/`), console 0.1.0 (16 классов `Console\*` с прежними FQCN), sitemap 0.3.0 (`SitemapConfig::loadOrDisabled()`,
+  требует console), doctrine 0.5.0, symfony-bundle 0.8.0, laravel 0.9.0, yii2 0.7.0 (`SitemapSupport` удалены,
+  предикат — `OptionalPackage`; доки 0b уехали с этими релизами). split.yml в четыре стадии. Уточнения — спека 17 §13.
+  Дальше: E (core 0.8.0).
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,

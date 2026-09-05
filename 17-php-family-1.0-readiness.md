@@ -1,7 +1,7 @@
 # 17. Семейство PHP к 1.0: состав core, DX, UX, SEO, дистрибуция
 
-Статус: спецификация v2 (после двух адверсальных ревью 2026-09-05: реализуемость — 33 находки, дизайн — 60). Волны 0a + hotfix
-и 0b выполнены 2026-09-05 (§11, §12); D, E, F не начаты. Основание: пять аудитов по линзам «состав core», «DX разработчика и AI-ассистента», «UX владельца сайта»,
+Статус: спецификация v2 (после двух адверсальных ревью 2026-09-05: реализуемость — 33 находки, дизайн — 60). Волны 0a + hotfix,
+0b и D выполнены 2026-09-05 (§11, §12, §13); E, F не начаты. Основание: пять аудитов по линзам «состав core», «DX разработчика и AI-ассистента», «UX владельца сайта»,
 «SEO-корректность», «дистрибуция». Исходное состояние: core 0.5.1, sitemap 0.1.1, doctrine 0.3.1, symfony-bundle 0.6.1,
 laravel 0.7.0, yii2 0.5.0.
 
@@ -568,3 +568,42 @@ F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в
    shell съедает обратные слэши; то же в README бандла/Laravel); `namespace app\models`, колонки модели и
    иллюстративность `Category` — текстом перед golden-блоком. Pages включён (`gh api … /pages -f build_type=workflow`),
    сайт опубликован, `homepage` в composer.json и на GitHub → сайт.
+
+## 13. Уточнения по реализации (D, 2026-09-05)
+
+Отклонения от §4, принятые при реализации, с причинами:
+
+1. **`ReadmeAssertions`** (появился в 0b, §4.1 его не перечисляет) переезжает в `testing` вместе с двумя другими
+   ассерциями: `Testing\Conformance\ReadmeAssertions`. Причина — импортирует `PHPUnit\Framework\Assert`, как они.
+   Тест README ядра (`ReadmeAiNotesTest`) переехал в `testing/tests` как `CoreReadmeAiNotesTest`: проверяет `../core`,
+   вне монорепо пропускается — core не получает `require-dev: indexnowkit/testing` (бутстрап-цикл §4.1).
+2. **`core/tests/Conformance/CoreConformanceTest.php` остаётся в core**: это собственный прогон C01–C22 ядра поверх
+   `FakeTransport`, кит он никогда не использовал. В `testing/tests` добавлен `CoreConformanceKitTest` — кит против
+   голого фасада `IndexNowKit::create()` (эталон адаптерного теста и покрытие пакета).
+3. **Mock-server — две одинаковые копии**: опубликованная `testing/resources/mock-server/router.php` и приватная
+   `core/tests/Support/mock-server/router.php` (тесты `Psr18Transport*` сплита core не могут ссылаться на соседний
+   пакет). Синхронность держит `MockServerRouterTest` пакета `testing` (байтовое равенство в монорепо; тот же тест
+   гоняет роутер под встроенным сервером по сценариям). `sitemap` хранит свой, другой роутер.
+4. **Гейт «`Symfony\Component\Console\` отсутствует в `packages/sitemap/src`» не выполним без смены контракта**:
+   `Sitemap\Console\SitemapRunner` — тело команды, печатает через `SymfonyStyle`, как раннеры `console`, а
+   `ResultFormatterInterface::summary()` принимает `SymfonyStyle`. Импорт оставлен и объявлен: `sitemap` требует
+   `indexnowkit/console ^0.1` **и** `symfony/console` явно (из `suggest` ушёл). Гейт для `packages/core/src` выполнен.
+5. **`OptionalPackage::checkLevel()`** добавлен рядом с `check()`: compile-time контейнер бандла регистрирует
+   `StaticCheck` определением с аргументами (уровень, строка), объект `StaticCheck` в него не положить. Уровень
+   «блок настроен, но игнорируется» — warning (в 0.6 было ok); exit-код не меняется (`--strict` — волна E).
+6. **Переопределение предиката в Laravel** — binding `IndexNowKitServiceProvider::SITEMAP_PACKAGE`
+   (`'indexnowkit.sitemap_package'`, не `SitemapPackage::class`: у семейства будут ещё опциональные пакеты),
+   фабрика `SitemapServices::package(?bool)`. Testbench: только `overrideApplicationBindings()` выполняется до
+   `register()` провайдера; `defineEnvironment()` — после (провайдер уже выбрал ветку). `ConfigFactory::factory()/
+   create()/build()` Laravel и Yii2 получили appended `?bool $sitemapInstalled = null`. В Yii2 свойство компонента
+   `sitemapInstalled` соседствует с одноимённым методом-аксессором (оба публичны, как в §4.3).
+7. **Бандл** тоже перешёл на `OptionalPackage` (гейт §9 D требует отсутствия `class_exists(SitemapReader)` во всех
+   трёх адаптерах): `DependencyInjection\SitemapServices::package(?bool)`; константы `IndexNowKitLoader::SITEMAP_MISSING*`
+   и `SitemapNotInstalledCommand::MESSAGE` удалены (тексты — из объекта; `DependencyInjection\*` — проводка, не API).
+   Текст critical-строки Yii2 получил хвост `(run "php yii indexnow/check")` (единый через `loadOrDisabled()`).
+8. **Состав core после D**: 106 файлов в `src/` (спека ожидала ~106; 105 после выноса плюс `Adapter\OptionalPackage`). `Submission\ResultSummary` — первый класс
+   нового пространства `Submission\` (волна E добавит `SubmissionStoreInterface`).
+9. **Версии и алиасы**: sitemap 0.3.0 требует `core ^0.7`, `console ^0.1`; адаптеры — `sitemap ^0.3` в
+   `require-dev`/`suggest`, бандл — `doctrine ^0.5`; branch-alias подняты до релизных (0.7.x/0.1.x/0.1.x/0.3.x/0.5.x/
+   0.8.x/0.9.x/0.7.x) до тега — `bin/link` разрешает соседей по алиасу.
+
