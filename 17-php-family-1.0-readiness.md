@@ -761,3 +761,24 @@ F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в
 
 Остаётся до 1.0 (по решению пользователя — без даты): критерий формы `Services`/`VerifyingStaging` с Yii3, `UPGRADE.md`,
 ноль `@deprecated` (`serve_key_file` удаляется на 1.0), заморозка идентификаторов conformance C01–C22, A01–A21, H01–H06, S01–S08.
+
+### 16.1. Волна G — стабилизация по аудиту 0.10 (2026-09-06)
+
+Шесть линз (`docs/plans/audit-0.10.md`, отчёты в `docs/plans/audit-0.10/`). Закрыто всё, что не требовало решения
+пользователя (~50 пунктов): секреты в `indexnow:config` (DSN, `key_location`, блоки пакетов через `ConfigRunner::maskedBlock()`,
+`SECURITY.md` — два секрета), потеря/дубли URL (Doctrine `rollBack()` в `finally`, DBAL 3 `commit(): false`, ретраи Messenger/
+Laravel только с `retryUrls`, чанкинг диспетчеров по `batch.max_urls`, `via`-обход с бюджетом depth × fan-out и посещёнными
+объектами, `X-Robots-Tag` per-token, RFC 9309 выбор группы robots.txt, `RobotsCache` по origin, `TokenBucket` без двойного учёта,
+`TransactionStaging::commit()` с catch), экстрактор фасада из резолвера (`Url\ParamExtractorAwareInterface`, `GuardedUrlResolver::inner()`),
+Yii3-готовность графа (узлы `changes`/`clock`, `events` замыканием, `null` из замыкания для nullable-узлов, `ObserverHelper::forChanges()`),
+`verify.time_budget`, лимит тела pre-flight 1 МиБ, общие `Verify\Check\{DispatchCheck,TransportCheck}`, PDO-стор транзакцией
+и multi-row INSERT, атомарный `seq` ring-buffer, тесты/CI (doctrine C-конформанс, mysql/pgsql job, floor ×10, Laravel 13 lowest,
+полнота AI-notes, реестр conformance-идов), документация (bc.md тиры: `RouteUrlResolverInterface`/`ResolverLocatorInterface` →
+Implement, `ParamValue` — sealed; compatibility, README Yii2 «Verify»). Релиз: core 0.11.0, console 0.4.0, testing 0.3.0,
+sitemap 0.6.0, verify 0.2.0, history 0.2.0, doctrine 0.8.0, symfony-bundle 0.12.0, laravel 0.13.0, yii2 0.11.0.
+
+Не сделано осознанно: L12 (уровень warning при превышении `verify.max_batch` — для `sitemap` это штатный путь, error шумел бы),
+L4 (`RetryPolicy` берёт максимум `Retry-After` по хостам — смена семантики ретрая, отдельное решение), L9 (`collect()` без
+`Result` для невалидного URL — семантика двух путей), W11 (`Config.php` 1026 строк — чистый рефакторинг, риск регрессии без выгоды
+пользователю), адаптеры Laravel/Yii2 всё ещё строят фасад в хуке (узел `changes` есть; переключение — вместе с Yii3).
+Решения пользователя из §6 аудита остаются открытыми.
