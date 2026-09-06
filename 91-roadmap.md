@@ -119,7 +119,7 @@
   прогона), doctrine 0.6.0, symfony-bundle 0.9.0, laravel 0.10.0 (события Laravel, `about`), yii2 0.8.0
   (`EVENT_RESULT`, `-v/-vv/-vvv`). Уточнения — спека 17 §14. Дальше: F (`verify` 0.1.0, `history` 0.1.0), затем 0.9 без
   breaking → 1.0.
-- 2026-09-06: волна F спеки 17 выполнена (релиз — по задаче 14 промпта волны): `indexnowkit/verify` 0.1.0
+- 2026-09-06: волна F спеки 17 **выпущена** (Packagist + GitHub releases, split-CI ×10 зелёный; репо php-verify/php-history, секреты SPLIT_SSH_KEY_VERIFY/HISTORY): `indexnowkit/verify` 0.1.0
   (`VerifyingSubmitter` — декоратор сабмиттера адаптера: noindex, robots.txt, canonical, редиректы, ошибки origin;
   `check --sample`; `sitemap --no-verify`), `indexnowkit/history` 0.1.0 (`Psr16SubmissionStore`, `PdoSubmissionStore`,
   команды `history`/`status`, строки `check`, вкладка профилера), core 0.9.0 **только аддитивно** (`Retry\ForbiddenCounter`,
