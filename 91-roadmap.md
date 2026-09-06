@@ -135,7 +135,9 @@
   yii2 0.10.0, console 0.3.1, doctrine 0.7.1, testing 0.2.1, sitemap 0.5.1, verify 0.1.1, history 0.1.1.
 - 2026-09-06 (волна G): шестилинзовый аудит семейства на 0.10 (`docs/plans/audit-0.10.md`, 1 CRITICAL / 14 HIGH / ~30 MEDIUM) и
   закрытие всего, что не требовало решения (спека 17 §16.1): секреты в `config`, потеря/дубли URL, Yii3-готовность графа,
-  `verify.time_budget`, CI (mysql/pgsql, floor ×10, Laravel 13 lowest). Восемь решений §6 аудита — за пользователем.
+  `verify.time_budget`, CI (mysql/pgsql, floor ×10, Laravel 13 lowest). Выпущено 2026-09-07 (core 0.11.0, console 0.4.0,
+  testing 0.3.0, sitemap 0.6.0, verify 0.2.0, history 0.2.0, doctrine 0.8.0, bundle 0.12.0, laravel 0.13.0, yii2 0.11.0).
+  Восемь решений §6 аудита — за пользователем.
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,

@@ -774,8 +774,10 @@ Yii3-готовность графа (узлы `changes`/`clock`, `events` за�
 `verify.time_budget`, лимит тела pre-flight 1 МиБ, общие `Verify\Check\{DispatchCheck,TransportCheck}`, PDO-стор транзакцией
 и multi-row INSERT, атомарный `seq` ring-buffer, тесты/CI (doctrine C-конформанс, mysql/pgsql job, floor ×10, Laravel 13 lowest,
 полнота AI-notes, реестр conformance-идов), документация (bc.md тиры: `RouteUrlResolverInterface`/`ResolverLocatorInterface` →
-Implement, `ParamValue` — sealed; compatibility, README Yii2 «Verify»). Релиз: core 0.11.0, console 0.4.0, testing 0.3.0,
-sitemap 0.6.0, verify 0.2.0, history 0.2.0, doctrine 0.8.0, symfony-bundle 0.12.0, laravel 0.13.0, yii2 0.11.0.
+Implement, `ParamValue` — sealed; compatibility, README Yii2 «Verify»). ВЫПУЩЕНО 2026-09-07: core 0.11.0, console 0.4.0, testing 0.3.0,
+sitemap 0.6.0, verify 0.2.0, history 0.2.0, doctrine 0.8.0, symfony-bundle 0.12.0, laravel 0.13.0, yii2 0.11.0. Первый прогон
+нового CI дал два урока: `Schema::sql('pgsql')` ставил `BOOLEAN ... DEFAULT 0` (PostgreSQL отказывает, поймано mysql/pgsql
+job'ом, исправлено в history 0.2.0), а полы coverage надо снимать с CI-джобы (pcov, setup-php 8.3), не с локального прогона.
 
 Не сделано осознанно: L12 (уровень warning при превышении `verify.max_batch` — для `sitemap` это штатный путь, error шумел бы),
 L4 (`RetryPolicy` берёт максимум `Retry-After` по хостам — смена семантики ретрая, отдельное решение), L9 (`collect()` без
