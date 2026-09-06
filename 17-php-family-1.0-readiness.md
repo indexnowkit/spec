@@ -813,5 +813,5 @@ L4 (`RetryPolicy` берёт максимум `Retry-After` по хостам �
 - **W5** бандл: `|| ^8.0` на всех symfony/*, флейвор `ci:install:symfony8` и джоба PHP 8.4 в root- и split-CI; README и
   composer.json согласованы; `compatibility.md` обновлён.
 
-Релиз: core 0.12.0, console 0.4.1, testing 0.3.1, sitemap 0.6.1, verify 0.2.1, history 0.2.1, doctrine 0.8.1,
-symfony-bundle 0.13.0, laravel 0.13.1, yii2 0.12.0.
+ВЫПУЩЕНО 2026-09-07 (subtree e54341f): core 0.12.0, console 0.4.1, testing 0.3.1, sitemap 0.6.1, verify 0.2.1, history 0.2.1,
+doctrine 0.8.1, symfony-bundle 0.13.0, laravel 0.13.1, yii2 0.12.0. CI 67/67 (новая джоба symfony8 зелёная).

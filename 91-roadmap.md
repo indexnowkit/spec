@@ -141,7 +141,8 @@
 - 2026-09-07 (волна H): семь из восьми решений аудита приняты и сделаны (спека 17 §16.2): `FieldCondition` без `Condition`,
   обязательный `ParamExtractor` (`plain()`), `create()` с `AttributeUrlResolver` по умолчанию, `submitEntities()`, Yii2
   `router.locales` (+алиасы), `ControllerOutput` через `Controller::stdout()`, Symfony 8 в бандле; `$previous` вместо `write()`
-  зафиксирован в bc.md. Остался A10 (проводка verify/history/sitemap в сами пакеты) — первая задача Yii3-волны.
+  зафиксирован в bc.md. Выпущено 2026-09-07 (core 0.12.0 … yii2 0.12.0). Остался A10 (проводка verify/history/sitemap
+  в сами пакеты) — первая задача Yii3-волны.
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
