@@ -80,8 +80,9 @@ class Post extends Model
 - `params: ['post' => 'self']` передаёт модель в `route()` — route model binding через `getRouteKey()`
   (и `{post:slug}` binding field — Laravel подставляет поле сам).
 - **Accessor'ы на Eloquent.** Атрибуты модели не являются PHP-свойствами, поэтому core не может прочитать `'slug'`
-  рефлексией. Ядро даёт точку расширения `Attribute\ParamExtractor::registerReader(SubjectReaderInterface)`;
-  адаптер регистрирует `EloquentSubjectReader`: для `Model` accessor читается через `getAttribute()`, если это
+  рефлексией. Ядро даёт точку расширения — `Attribute\SubjectReaderInterface`, ридеры отдаются экземпляру
+  `ParamExtractor` графа (с core 0.10.0 адаптер биндит `ParamExtractor::class` с `EloquentSubjectReader`; до того —
+  статический `registerReader()`); `EloquentSubjectReader`: для `Model` accessor читается через `getAttribute()`, если это
   атрибут, cast, mutator/accessor или отношение (метод с объявленным возвращаемым типом `Relation` либо уже
   загруженное); иначе accessor обрабатывает DSL core (метод `isPublished()`, `getX()`, свойство). Незнакомое имя
   → `ConfigurationException` (A10), а не `null`. `fields`/`whenFields` — имена атрибутов (колонок) как их пишет

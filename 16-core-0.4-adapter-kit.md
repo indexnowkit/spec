@@ -49,7 +49,7 @@
 
 Что НЕ меняем: протокольный слой (`Client`, `Result`, `Reason`, `Submitter`), модель правил (`UrlRule`, `RuleCompiler`,
 `ChangeClassifier`, `ObjectChangeHandler`), staging (`TransactionStaging`, `VerifyingStaging`), транспорт, граница коммита в
-адаптерах. `ParamExtractor::registerReader()` (статическая регистрация) — долг до 1.0, в этой волне не трогается.
+адаптерах. `ParamExtractor::registerReader()` (статическая регистрация) — долг до 1.0, в этой волне не трогается (закрыт core 0.10.0: спека 17 §16).
 
 ## 1. Пакет `indexnowkit/sitemap` (волна A)
 

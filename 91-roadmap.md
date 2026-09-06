@@ -90,7 +90,7 @@
   help опций Yii из `Console\Definitions`; phpstan doctrine на флейворе dbal3 (`phpstan.dbal3.neon`, без baseline);
   `IndexNowKitLoader::load()` по блокам (`ContainerShapeTest`), `Yii2\Wiring`/`References` из компонента;
   `SubmitUrlsJob` yii2 перепушивает остаток с задержкой `Retry-After`/`retry.*`. Остаётся до 1.0:
-  `ParamExtractor::registerReader()` (статическая регистрация, спека 16 §0).
+  `ParamExtractor::registerReader()` (статическая регистрация, спека 16 §0) — закрыт core 0.10.0 (спека 17 §16).
 
 - Спека 17, волна 0a + hotfix — **выполнена 2026-09-05**: core 0.6.0 (`check` красный на стейджинге с боевым ключом без
   `dry_run`, `Config::$dryRunExplicit`, дефект дебаунса при нескольких движках, `Engine::InternetArchive`/`Amazon`,
@@ -128,6 +128,11 @@
   пакетов за `OptionalPackage`). Уточнения — спека 17 §15. Дальше: 1.0 по §7 (`ParamExtractor::registerReader()`,
   критерий формы `Services` с Yii3, `UPGRADE.md`, ноль `@deprecated`, `compatibility.md`, замороженные идентификаторы
   conformance — теперь и S01–S08). Yii3/Битрикс после.
+- 2026-09-06 (после F): **1.0 отложен** решением пользователя до полной уверенности в стабильности; долги §7 идут как 0.x.
+  Сделано без Yii3: `ParamExtractor` — инжектируемый объект (core 0.10.0, `registerReader()` удалён; узел `Services::paramExtractor()`,
+  binding/сервис/узел в трёх адаптерах; `FieldCondition` считается через ридеры), `core/docs/compatibility.md` (матрица
+  PHP × фреймворк × EOL, правило подъёма минимального PHP). Спека 17 §16. Релиз: core 0.10.0, symfony-bundle 0.11.0, laravel 0.12.0,
+  yii2 0.10.0, console 0.3.1, doctrine 0.7.1, testing 0.2.1, sitemap 0.5.1, verify 0.1.1, history 0.1.1.
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,

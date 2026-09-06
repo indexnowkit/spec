@@ -84,7 +84,7 @@ IndexNow разницы нет, коллектор всё равно сбрас�
 rename — имена колонок первичного ключа.
 
 Чтение accessor'ов: атрибуты AR не PHP-свойства (Yii2 `__get`, Yii3 `get()`), поэтому оба пакета регистрируют
-`SubjectReaderInterface` через `ParamExtractor::registerReader()`: Yii2 `ActiveRecordSubjectReader` —
+`SubjectReaderInterface` в `ParamExtractor` графа (узел `ServicesBuilder::paramExtractor()`; до core 0.10.0 — статический `registerReader()`): Yii2 `ActiveRecordSubjectReader` —
 `hasAttribute()`/`getAttribute()`, отношение через `getRelation($name, false)` (loaded или lazy); Yii3 —
 `hasProperty()`/`get()`, отношения `relationQuery($name)`/`relation($name)`. Незнакомое имя → к DSL core
 (методы `isPublished()`), потом `ConfigurationException` (A10).
@@ -130,7 +130,7 @@ rename — имена колонок первичного ключа.
 
 `IndexNowComponent::bootstrap($app)`:
 
-- регистрирует `ParamExtractor::registerReader(new ActiveRecordSubjectReader())`;
+- даёт графу `new ParamExtractor(new ActiveRecordSubjectReader())` (узел `paramExtractor`; до core 0.10.0 — статический `registerReader()`);
 - модуль `indexnow` (`IndexNowKit\Yii2\Module`): в web — контроллер `key-file`, в консоли — контроллер `indexnow`
   с действиями; если приложение уже объявило модуль с этим id — не трогаем;
 - web: `urlManager->addRules([key_file.pattern => 'indexnow/key-file/index'])` при `key_file.enabled` и
@@ -235,7 +235,7 @@ sitemap-части в `Sitemap\SitemapServices` и `Console\SitemapAction`; бе
 'indexnow:submit-record', ...)`. `di-console.php` — команды; `params-console.php` — `yiisoft/yii-console.commands`.
 `routes.php` — `Route::get(key_file.pattern)->action(KeyFileHandler::class)->name('indexnow/key-file')`.
 `events-web.php` — `AfterEmit` → `FlushListener`; `events-console.php` — `ApplicationShutdown` → `FlushListener`.
-`bootstrap.php` — `ParamExtractor::registerReader(new ActiveRecordSubjectReader())` и
+`bootstrap.php` — `new ParamExtractor(new ActiveRecordSubjectReader())` в графе (ранее статический `registerReader()`) и
 `ObserverProvider::set($container->get(IndexNowObserver::class))`.
 
 ### Хук AR

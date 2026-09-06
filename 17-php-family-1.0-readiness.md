@@ -430,9 +430,10 @@ $inner, …)` — декоратор: сначала `inner->normalize()`, за�
 - **PHP:** минимальная версия поднимается в первом миноре после выхода предыдущей из security-поддержки (`^8.2` → `^8.3`
   в первом миноре после 2026-12-31). **Подъём минимальной PHP — не нарушение BC**: Composer не предложит новый минор на
   старом PHP (записать в `bc.md`). Таблица `php/docs/compatibility.md` (пакет × PHP × фреймворк × EOL); Symfony 6.4 LTS
-  до ноября 2027 совместим с этим правилом.
+  до ноября 2027 совместим с этим правилом. **Сделано** (§16): таблица лежит в `packages/core/docs/compatibility.md`
+  (а не в `php/docs/` — у монорепо нет своего docs/, сайт собирает только docs пакетов), в nav сайта «Supported versions».
 - **Критерии 1.0 core** (`91-roadmap.md`): ноль `Symfony\Component\Console\`/`PHPUnit\` в `src/`; ноль лживых `suggest`;
-  тир «may grow» исчез; `ParamExtractor::registerReader()` заменён инъекцией; `RuleAwareUrlResolverInterface` закрыт;
+  тир «may grow» исчез; `ParamExtractor::registerReader()` заменён инъекцией (**сделано** core 0.10.0, §16); `RuleAwareUrlResolverInterface` закрыт;
   `Adapter\Services`/`VerifyingStaging` прошли критерий формы с Yii3; **один полный минор (0.9) без breaking** после E;
   `SubmissionStoreInterface`, `Condition`, `Http\Response::headers`, `CheckItem::code`, `Client` failure-cache прожили минор;
   **ни одного `@deprecated` члена на теге 1.0** (`serve_key_file` удаляется в 1.0); `UPGRADE.md` 0.x → 1.0 один на семейство;
@@ -729,3 +730,34 @@ F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в
     `custom (<class>)` / `…, store failed: <message>`).
 19. **phpstan бандла** сканирует `ContainerConfigurator.php` (`scanFiles`): статическая рефлексия находит функции
     `service()`/`service_closure()` только в загруженном файле, и с ростом числа файлов порядок воркеров стал это ломать.
+
+## 16. Уточнения по реализации (после F: пункты §7 без Yii3 и без тега 1.0; core 0.10.0)
+
+Решение пользователя 2026-09-06: **1.0 не ставим**, пока нет полной уверенности в стабильности; долги §7 закрываются
+обычными 0.x-релизами. Из шести пунктов §7 без Yii3 и без самого тега делаются два — они и сделаны:
+
+1. **`ParamExtractor` — объект, а не статический реестр.** `new ParamExtractor(...$readers)` держит `SubjectReaderInterface`
+   одного графа; `extract()/read()/resolve()/condition()` — методы экземпляра с теми же сигнатурами; `with(...)`,
+   `fromReaders(iterable)` (для tagged iterator контейнера), `readers()`. `registerReader()/unregisterReader()` удалены
+   (core 0.10.0, «Changed» с миграцией). Прокидка — только добавленными необязательными параметрами: `IndexNowKit::create(extractor:)`
+   и конструктор (`public readonly ParamExtractor $extractor`), `AttributeUrlResolver` (конструктор, `fromConfig()`, `extractor()`),
+   `ObjectChangeHandler`, `UrlRule::appliesTo(object, ?ParamExtractor)`, `ChangeClassifier::classify(..., ?ParamExtractor)`;
+   null = чистый DSL (plain PHP и Doctrine ничего не замечают). Узел графа `Services::paramExtractor()` /
+   `ServicesBuilder::paramExtractor()`. Адаптеры: Laravel — binding `ParamExtractor::class` (`extend()` + `with()` для своих
+   ридеров), Symfony — сервис `indexnowkit.param_extractor` из `fromReaders(tagged_iterator('indexnowkit.subject_reader'))`,
+   `SubjectReaderInterface` автоконфигурируется тегом, Yii2 — узел в `Wiring`, статический флаг `$readerRegistered` исчез.
+   Console `ExplainRunner` читает через `$indexNow->extractor`; doctrine `IndexNowListener` передаёт его в свой
+   `ObjectChangeHandler`.
+2. **`FieldCondition` считается через экстрактор**: `condition()` читает `field()` ридерами и спрашивает `heldFor()`, поэтому
+   `new Equals('status', 'published')` видит атрибут Eloquent/AR так же, как `params`. Иначе после ухода статики `Equals::evaluate()`
+   на модели Eloquent ломался бы (интерфейс `Condition::evaluate(object)` — Implement-тир, менять сигнатуру нельзя).
+   `Equals::evaluate()` сам по себе — чистый DSL; ядро его для `FieldCondition` не вызывает. Обычный `Condition` — `evaluate()`.
+3. **`compatibility.md`** — `packages/core/docs/compatibility.md`: политика (минимальный PHP поднимается в первом миноре после
+   выхода предыдущей версии из security-поддержки; это не BC-break — записано и в `bc.md`), матрица пакет × PHP × фреймворк
+   × upstream EOL со ссылками, флейворы CI. В nav сайта — «Supported versions» (`bin/docs-collect`), ссылка в `php/README.md`.
+4. **Релиз**: core 0.10.0 (breaking), symfony-bundle 0.11.0 / laravel 0.12.0 / yii2 0.10.0 (новая точка расширения), console 0.3.1
+   и doctrine 0.7.1 (код), testing 0.2.1 / sitemap 0.5.1 / verify 0.1.1 / history 0.1.1 (только `core ^0.10`). Branch-alias
+   `dev-main` core → `0.10.x-dev` до тегов, иначе `composer.monorepo.json` соседей не резолвится.
+
+Остаётся до 1.0 (по решению пользователя — без даты): критерий формы `Services`/`VerifyingStaging` с Yii3, `UPGRADE.md`,
+ноль `@deprecated` (`serve_key_file` удаляется на 1.0), заморозка идентификаторов conformance C01–C22, A01–A21, H01–H06, S01–S08.
