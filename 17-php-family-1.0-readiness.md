@@ -784,3 +784,34 @@ L4 (`RetryPolicy` берёт максимум `Retry-After` по хостам �
 `Result` для невалидного URL — семантика двух путей), W11 (`Config.php` 1026 строк — чистый рефакторинг, риск регрессии без выгоды
 пользователю), адаптеры Laravel/Yii2 всё ещё строят фасад в хуке (узел `changes` есть; переключение — вместе с Yii3).
 Решения пользователя из §6 аудита остаются открытыми.
+
+### 16.2. Волна H — решения аудита 0.10 (2026-09-07)
+
+Восемь `[решение]` из `docs/plans/audit-0.10.md` §6 приняты пользователем по рекомендации (все, кроме A10 — проводка
+опциональных пакетов в сами пакеты, она первая задача Yii3-волны). Ломающие — одним минором core 0.12.0, чтобы Yii3 писался
+на финальных сигнатурах:
+
+- **A3(b)** `Attribute\Param\FieldCondition` больше не наследует `Condition`; `Equals::evaluate()` удалён (строил
+  `new ParamExtractor()` внутри — на Eloquent отвечал неверно). `when: string|Condition|FieldCondition|Closure`.
+  Вручную: `$extractor->condition($subject, $equals)`.
+- **A4** экстрактор — обязательный параметр: `AttributeUrlResolver::__construct($reader, $extractor, ...)` / `fromConfig($config,
+  $reader, $extractor, ...)`, `ObjectChangeHandler::__construct($rules, $resolver, $extractor, $logger)`,
+  `ChangeClassifier::classify($rule, $subject, $extractor, $changedFields, $changeSet)`, `UrlRule::appliesTo($subject, $extractor)`;
+  `ParamExtractor::plain()` для голого DSL. `IndexNowKit::create(extractor:)` и конструктор фасада — по-прежнему необязательны
+  (фасад берёт экстрактор у резолвера).
+- **A9** `IndexNowKit::create()` и конструктор без `resolver:` строят `AttributeUrlResolver::fromConfig()` (как `ServicesBuilder`),
+  не `NullUrlResolver`; «ничего не резолвить» — явный `resolver: new NullUrlResolver()`.
+- **A14** `IndexNowKit::submitEntities()`; `submitAll()` — `@deprecated`-алиас на один минор. Схема `submitX`/`submitXs` и словарь
+  ядра записаны в `core/docs/adapters.md` («Names»).
+- **A15** Yii2: `router.locales`, `router.locale_parameter`, `router.set_app_locale`; старые `router.languages`,
+  `language_parameter`, `set_app_language` читаются с warning-депрекацией до следующего минора (`Wiring::ROUTER_RENAMED`).
+- **A12** без `write()`: `ObjectChangeHandler::renamed(..., $previous)` зафиксирован в `bc.md` как контракт для адаптеров, чьи
+  объекты не сбросить рефлексией; `SubjectReaderInterface` остаётся read-only.
+- **W3** symfony/console в Yii2 остаётся (раннеры console-пакета, Laravel и Yii3 стоят на нём); дефект вывода мимо
+  `Controller::stdout()` закрыт `Console\ControllerOutput` (наследник `Output`, `doWrite()` → `stdout()`, decorated по
+  `isColorEnabled()`), инжектируемый `$output` не тронут.
+- **W5** бандл: `|| ^8.0` на всех symfony/*, флейвор `ci:install:symfony8` и джоба PHP 8.4 в root- и split-CI; README и
+  composer.json согласованы; `compatibility.md` обновлён.
+
+Релиз: core 0.12.0, console 0.4.1, testing 0.3.1, sitemap 0.6.1, verify 0.2.1, history 0.2.1, doctrine 0.8.1,
+symfony-bundle 0.13.0, laravel 0.13.1, yii2 0.12.0.
