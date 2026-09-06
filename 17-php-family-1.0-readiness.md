@@ -815,3 +815,18 @@ L4 (`RetryPolicy` берёт максимум `Retry-After` по хостам �
 
 ВЫПУЩЕНО 2026-09-07 (subtree e54341f): core 0.12.0, console 0.4.1, testing 0.3.1, sitemap 0.6.1, verify 0.2.1, history 0.2.1,
 doctrine 0.8.1, symfony-bundle 0.13.0, laravel 0.13.1, yii2 0.12.0. CI 67/67 (новая джоба symfony8 зелёная).
+
+### 16.3. Волна I — A10: проводка опциональных пакетов в сами пакеты (2026-09-07)
+
+Последнее решение аудита 0.10. Три класса в пакетах — `Verify\Adapter\VerifyServices`, `History\Adapter\HistoryServices`,
+`Sitemap\Adapter\SitemapServices` — держат то, что три адаптера копировали (1257 строк в девяти файлах, тексты `check`
+дословно): `package()`, `options()`, `config($block, $logger, $checkCommand)`, транспорт/robots/декораторы (verify), сторы
+`pdoStore()`/`psr16Store()`, `debounceCacheId()`, `forbiddenCounter()`, `check()`, раннеры, `describe()` (history),
+`reader()`, `spoolCheck()`, `runner()` (sitemap) — статические функции над частями плюс двойники `*For()` поверх
+`Adapter\Services` для рантайм-графа (Yii2, Yii3, plain PHP). Форма: два слоя, потому что Laravel и бандл собирают граф
+контейнером (биндинги / DI-определения с `factory`), а Yii — рантайм-`Services`; общее — конструкции и тексты, а не способ
+регистрации. В адаптерах осталось фреймворковое: источник блока, поиск кэша/соединения/`http.client`, факты очереди для
+`status`, sample-check над ORM, признак web-запроса. Yii2 удалил свои три класса; Laravel и бандл сохранили id и
+`register()`, делегируя. Адаптеры получили `conflict` с verify <0.3, history <0.3, sitemap <0.7. Ядро не менялось.
+
+Релиз: verify 0.3.0, history 0.3.0, sitemap 0.7.0, symfony-bundle 0.14.0, laravel 0.14.0, yii2 0.13.0.
