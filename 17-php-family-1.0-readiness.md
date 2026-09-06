@@ -755,7 +755,7 @@ F: `verify` и `history` на Packagist, за `OptionalPackage`, строки в
 3. **`compatibility.md`** — `packages/core/docs/compatibility.md`: политика (минимальный PHP поднимается в первом миноре после
    выхода предыдущей версии из security-поддержки; это не BC-break — записано и в `bc.md`), матрица пакет × PHP × фреймворк
    × upstream EOL со ссылками, флейворы CI. В nav сайта — «Supported versions» (`bin/docs-collect`), ссылка в `php/README.md`.
-4. **Релиз**: core 0.10.0 (breaking), symfony-bundle 0.11.0 / laravel 0.12.0 / yii2 0.10.0 (новая точка расширения), console 0.3.1
+4. **Релиз — выпущен 2026-09-06** (Packagist, GitHub releases, `packagist-check --strict` ×10, split-CI зелёный): core 0.10.0 (breaking), symfony-bundle 0.11.0 / laravel 0.12.0 / yii2 0.10.0 (новая точка расширения), console 0.3.1
    и doctrine 0.7.1 (код), testing 0.2.1 / sitemap 0.5.1 / verify 0.1.1 / history 0.1.1 (только `core ^0.10`). Branch-alias
    `dev-main` core → `0.10.x-dev` до тегов, иначе `composer.monorepo.json` соседей не резолвится.
 
