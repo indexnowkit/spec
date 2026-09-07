@@ -829,4 +829,5 @@ doctrine 0.8.1, symfony-bundle 0.13.0, laravel 0.13.1, yii2 0.12.0. CI 67/67 (н
 `status`, sample-check над ORM, признак web-запроса. Yii2 удалил свои три класса; Laravel и бандл сохранили id и
 `register()`, делегируя. Адаптеры получили `conflict` с verify <0.3, history <0.3, sitemap <0.7. Ядро не менялось.
 
-Релиз: verify 0.3.0, history 0.3.0, sitemap 0.7.0, symfony-bundle 0.14.0, laravel 0.14.0, yii2 0.13.0.
+ВЫПУЩЕНО 2026-09-07 (subtree 1b2a9df): verify 0.3.0, history 0.3.0, sitemap 0.7.0, symfony-bundle 0.14.0, laravel 0.14.0,
+yii2 0.13.0. CI 67/67. Аудит 0.10 закрыт полностью.

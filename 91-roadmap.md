@@ -144,7 +144,7 @@
   зафиксирован в bc.md. Выпущено 2026-09-07 (core 0.12.0 … yii2 0.12.0). Остался A10 (проводка verify/history/sitemap
   в сами пакеты) — первая задача Yii3-волны.
 - 2026-09-07 (волна I): A10 сделан (спека 17 §16.3): `{Verify,History,Sitemap}\Adapter\*Services` в самих пакетах, три адаптера
-  делегируют (Yii2 удалил копии), `conflict` с verify <0.3 / history <0.3 / sitemap <0.7. Аудит 0.10 закрыт полностью; дальше Yii3.
+  делегируют (Yii2 удалил копии), `conflict` с verify <0.3 / history <0.3 / sitemap <0.7. Выпущено 2026-09-07. Аудит 0.10 закрыт полностью; дальше Yii3.
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
