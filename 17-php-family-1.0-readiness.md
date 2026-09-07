@@ -890,3 +890,19 @@ symfony-bundle 0.15.0, laravel 0.15.0, yii2 0.14.0, yii3 0.1.0 (конструк
 `http.client`, sitemap-фильтр — миноры). Дополнительно: PHPStan уровня 6 по всем тестовым наборам (`phpstan.tests.neon`) и
 `config/` на уровне 9, `failOnDeprecation` с `ignoreIndirectDeprecations`, PHPUnit `^11.5 || ^12.0 || ^13.0`, Symfony 8 в dev,
 ORM 3 + DBAL 3 в матрице, split-CI выровнен с монорепо. Сводка — `php/CHANGELOG.md` Unreleased; пункты — `docs/plans/audit-0.13.md`.
+
+**Отложенные пункты закрыты (волна K, 2026-09-07, до пуша той же волны).** W12 — `Testing\Conformance\Arrays::merge()` в
+`indexnowkit/testing` 0.3.2, три `Fixtures` делегируют. W11 — `docs/plans/config-decomposition.md`, вариант B по
+рекомендации: `Config.php` 603 строки вместо 1033, парсинг в `@internal` `Config\ConfigParser`, нормализация в
+`Config\ConfigNormalizer`, `with()` по рефлексии сигнатуры конструктора; поверхность тира Call без изменений, доказано
+`ConfigParityTest` со снимком (24 валидных, 62 невалидных конфигурации), core 0.13.0 без смены версии. Порог 400 строк для
+`Config.php` признан недостижимым без снятия 44 именованных параметров (ломающее); обоснованный порог — 600. T20 —
+`docs/plans/mutation-and-taint.md`: Infection 0.35 (требует PHP ^8.3 — живёт в `php/tools/infection`, не в `require-dev`)
+по всему `src` пяти пакетов (core, verify, sitemap, history, console; полный core — 3787 мутантов, 96 с на 11 потоках),
+`tests/msi-floor.txt` с храповиком coverage-floor, `bin/mutation`, джоба `mutation` (не блокирующая до трёх зелёных
+недель на CI-замерах) и `mutation / changed lines` на pull request; Psalm 6.16 (`php/tools/psalm`) только для
+`--taint-analysis` — harness `tests/Taint/entrypoints.php` в каждом из пяти пакетов (у библиотеки нет источников, прежняя
+sitemap-джоба была пустой), `history/Pdo\Schema::table()` с `@psalm-taint-escape sql`, два потока «по замыслу»
+(`--env-file`, локальный файл sitemap) подавлены в `psalm.xml` с причиной, джоба `taint.yml` блокирующая, `bin/taint`.
+Границы записаны в `core/docs/testing.md`: `parse_url()` обрывает taint, SSRF остаётся на тестах; адаптеры вне матрицы.
+
