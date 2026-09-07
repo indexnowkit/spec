@@ -15,10 +15,10 @@
 живёт после `reset()` (`resetLogger()` для тестов), иначе ветка недостижима; (7) бандл: закрытие `LocalesCheck` над метаданными —
 отдельный `Check\MappedClasses` (замыкание нельзя описать в DI без класса); `HistoryServices` бандла тоже держал три `in_array` —
 убраны; (8) `SubmitUrlsMessage::newId()`, `SubmitUrlsJob::newId()` ×2 оставлены делегатами на `BatchingDispatcher::newJobId()`.
-Не сделано: ничего из §4. Найдено до волны и не чинилось (не в её границах): `bin/taint core` — `TaintedHtml` в
-`tests/Taint/entrypoints.php:37` (`echo` тела ключ-файла в харнесе; воспроизводится на 02c667c); `bin/ci symfony-bundle symfony64` и
-`lowest` — `ignore.unmatchedLine` в `tests/App/Controller/ArticleController.php:50` и `tests/Functional/MessengerDispatchTest.php:47`
-(phpstan level 6 по тестам на другом vendor). Аудит — 2026-09-07, тем же днём.
+Не сделано: ничего из §4. Найдено до волны (воспроизводится на 02c667c) и починено следом (2026-09-08): `bin/taint core` —
+`TaintedHtml` на `echo` тела ключ-файла в харнесе (`KeyFileResponder::bodyForKey()` помечен `@psalm-taint-escape`: тело — ключ после
+`KeyValidator`); `bin/ci symfony-bundle symfony64|lowest` — два `ignore.unmatchedLine` в тестах (ignore, срабатывавшие на одном vendor
+и не на другом, заменены кодом без ignore). Аудит — 2026-09-07, тем же днём.
 
 ## 0. Цель и границы
 
