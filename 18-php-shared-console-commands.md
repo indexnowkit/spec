@@ -261,6 +261,9 @@ final class KeyFileRequestHandler implements RequestHandlerInterface, Middleware
 
 ## 8. Фаза B (отдельное решение): `bin/indexnow` для plain PHP и CMS
 
+**Сделано волной N (спека 19b, 2026-09-08)** — отдельным пакетом `indexnowkit/cli` (не `bin` в console: решение 19b §9.1), с
+файлом состояния, PHAR, Docker-образом и GitHub Action; `ConfigSourceInterface` оказался единственной точкой, как и предсказано.
+
 После §3 команды не знают фреймворка; голое приложение — тридцать строк: `Console\ConsoleApplication::fromEnv()` (или
 `create(IndexNowKit $kit, ConfigSourceInterface $config, Vocabulary $words, ...)`) собирает `IndexNowKit::create(Config::fromEnv())`,
 раннеры, `SampleOptions` без сэмплера, `StatusRunner`/`HistoryRunner` при установленных пакетах и отдаёт

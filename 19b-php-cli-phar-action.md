@@ -1,7 +1,24 @@
 # 19b. Волна N (фаза B спеки 18): `indexnow` — CLI без фреймворка, PHAR, Docker-образ, GitHub Action
 
-Статус: **принят к реализации 2026-09-08** (исследование этой сессии; решения §9 — рекомендации, пользователь утверждает
-в промпте волны `docs/plans/wave-n-cli-execution-prompt.md`). Реализация — отдельной сессией, до пуша; релиз — по «действуй».
+Статус: **реализован 2026-09-08** (шесть коммитов поверх d39049b, до пуша; решения §9 по рекомендациям; релиз — по «действуй»:
+core 0.13.1 → sitemap 0.9.0 → cli 0.1.0 → Packagist `indexnowkit/cli` и GHCR public (пользователь) → `action@1.0.0` → Marketplace).
+Отклонения от §3: (1) `.env` **парсится** (`Dotenv::parse()`), не загружается в процесс — реальное окружение накладывается
+явно, `$_ENV`/`putenv` не трогаются, `variables_order` неважен (§7.7 снят); (2) entrypoint действия — **PHP** (`docker/indexnow-action`),
+не shell: GitHub передаёт входы как `INPUT_BASE-URL` с дефисом (проверено по docs.github.com), sh такое не читает; `dry-run`
+действия — флаг команды, не `INDEXNOW_DRY_RUN` (иначе `check` в prod считает dry run ошибкой); (3) образ в **двух target**:
+`cli` с `USER indexnow` (uid 1000) и `<ver>-action` без `USER` — Docker-действие обязано работать от root
+(docs.github.com «Dockerfile support», `USER`), `action.yml` пинит `-action`; (4) в `check` нет строки `verify.dispatch`
+(её текст советует очередь, которой у процесса нет), `--sample-class` отвечает текстом пакета verify; `status` описывает
+стор как `state (SqliteCache)` через `HistoryServices::describeStore()`; (5) `SitemapRunner` запоминает батчи и **без**
+`--new-only` (полный прогон, затем `--new-only` в cron — каждое изменение один раз); (6) `history.store` выключается
+`INDEXNOW_HISTORY_STORE=` / `none` / `null` / `off`; (7) `bin/config-table` без колонки «CLI env» — правило одно
+(`INDEXNOW_<BLOCK>_<KEY>`), таблица в `cli/docs/configuration.md`; (8) `CommandDefinition`-стаб `ConfigurationErrorCommand`:
+`help <cmd>` работает без ключа, сама команда печатает ошибку конфигурации; (9) `require-dev` четырёх адаптеров —
+`indexnowkit/sitemap ^0.8 || ^0.9` (path-репозиторий 0.9.x-dev иначе не резолвится в монорепо-CI; релиза адаптеров не нужно);
+(10) попутно в core 0.13.1: `Config::unknownOptions()` спускается во вложенные блоки — `history.pdo` считался неизвестным
+во всех адаптерах; (11) coverage-floor cli записан локально (93.75), перезаписать числом CI после пуша (урок волны M);
+mutation для cli нет (решение 8). Инфраструктура `gh` создана: `indexnowkit/php-cli`, `indexnowkit/indexnow-action`
+(public, issues/wiki/projects off, topics), deploy-keys «split», секреты `SPLIT_SSH_KEY_CLI`, `SPLIT_SSH_KEY_ACTION`.
 
 ## 0. Цель и границы
 
