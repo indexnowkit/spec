@@ -7,15 +7,15 @@
 | | `indexnowkit/yii2` | `indexnowkit/yii3` |
 |---|---|---|
 | Namespace | `IndexNowKit\Yii2` | `IndexNowKit\Yii3` |
-| Фреймворк | `yiisoft/yii2 ^2.0.45`, PHP ≥ 8.2 | `yiisoft/active-record ^1.0`, `yiisoft/db ^2.0`, `yiisoft/di ^1.2`, `yiisoft/config ^1.5`, `yiisoft/router ^3.0 \|\| ^4.0`, `yiisoft/yii-console ^2.0`, `yiisoft/yii-event ^2.0`, `yiisoft/yii-http ^1.0`; PHP ≥ 8.2 |
+| Фреймворк | `yiisoft/yii2 ^2.0.45`, PHP ≥ 8.2 | `require`: `yiisoft/active-record ^1.0` (1.1.0, 2026-05), `yiisoft/db ^2.0` (2.0.1), `yiisoft/router ^4.0` (4.0.2); приложение приносит `yiisoft/config ^1.6`, `yiisoft/di ^1.4`, `yiisoft/router-fastroute ^4.0`, `yiisoft/yii-console ^2.4`, `yiisoft/yii-event ^2.2`, `yiisoft/yii-http ^1.1` (в `require-dev`/`suggest` пакета; проверено на Packagist 2026-09-07); PHP ≥ 8.2 |
 | Точка входа | компонент `indexnow` + `bootstrap` | конфиг-плагин `yiisoft/config` (`config/*.php` пакета) |
 | Хук ORM | `IndexNowBehavior` на классе AR (или список `models`) | атрибут `#[IndexNowEvents]` + `EventsTrait` AR |
 | Консоль | `php yii indexnow/<action>` (свой контроллер, вывод через `SymfonyStyle`) | `./yii indexnow:<command>` (symfony/console, как в бандле) |
-| Очередь | `yiisoft/yii2-queue` (опционально) | нет стабильной (`yiisoft/queue` не выпущен): `sync`/`none`, `DispatcherInterface` заменяем |
+| Очередь | `yiisoft/yii2-queue` (опционально) | нет стабильной (`yiisoft/queue` на 2026-09-07 — только dev-ветки): `sync`/`none`, `DispatcherInterface` заменяется в `di/` приложения |
 | Дебаунс | `yii\caching\CacheInterface` (`YiiCacheDebounceStore`) | PSR-16 из контейнера (`Psr16DebounceStore`) |
 | Тесты | PHPUnit 11, `yii\web\Application`/`yii\console\Application` в памяти, sqlite | PHPUnit 11, `yiisoft/di` контейнер из конфигов пакета, sqlite (`yiisoft/db-sqlite`) |
 
-Оба: `indexnowkit/core ^0.3`, phpstan 9 + strict-rules, php-cs-fixer монорепо, split-репо `php-yii2`, `php-yii3`.
+Оба: `indexnowkit/core` (yii2 0.13 и yii3 0.1 — `^0.12`), `indexnowkit/console ^0.4`, phpstan 9 + strict-rules, php-cs-fixer монорепо, split-репо `php-yii2`, `php-yii3`.
 
 ## Почему Yii, и почему вместе
 
@@ -285,9 +285,42 @@ H01–H06 (файл ключа 200/404/disabled, `check` exit-коды, отпр
 `yiisoft/yii2-composer` (allow-plugins) и bower-asset'ы — в dev через `yidas/yii2-composer-bower-skip`
 (в приложениях пользователей asset-packagist уже настроен шаблоном).
 
+## Уточнения по реализации (Yii3, 2026-09-07)
+
+`indexnowkit/yii3` 0.1.0 написан по этой спеке; что уточнилось на коде:
+
+- **Граф — контейнер.** Каждый узел `Adapter\Services` (17 узлов `ServicesBuilder`) — definition контейнера по интерфейсу
+  (`config/di.php`); граф приложения читает узлы из контейнера, а умолчание каждого definition — фабрика ядра для этого
+  узла над графом, чьи остальные узлы тоже из контейнера (`Wiring::transport()`, `Wiring::client()`, …). Заменённый в `di/`
+  приложения `TransportInterface` доходит до клиента, чекера и командных сабмиттеров. Новых узлов и методов `ServicesBuilder`
+  не понадобилось; `VerifyingStaging` использован как есть — критерий §7 спеки 17 выполнен (§16.4 там).
+- **Переопределение частей — definitions, не params.** Yii2-свойства компонента (`transport`, `debounceStore`, `dispatcher`,
+  `urlResolver`, `submissionStore`) в Yii3 не нужны: интерфейс в `di/` приложения. Тестовый транспорт verify — definition
+  `IndexNow::VERIFY_TRANSPORT`. Предикаты «пакет не установлен» — аргументы конструктора `IndexNow` (`sitemapInstalled` и т.д.);
+  `OptionalPackage` строится напрямую из ядра, потому что `*\Adapter\*Services` пакета без пакета не загружается.
+- **Flush держит открытую транзакцию.** Если в момент flush (`AfterEmit`, `ApplicationShutdown`, явный `flush()`) транзакция
+  соединения ещё активна, staged-URL не проверяются (проверка прочитала бы незакоммиченные данные), остаются до следующего
+  flush после завершения транзакции и один раз логируются `warning` с количеством. Это уточняет фразу выше «проверка читает
+  через то же соединение и видит незакоммиченные данные».
+- **Change set из снимка `BeforeUpdate`.** `oldValues()` после `AfterUpdate` уже перезаписаны записанными значениями: колонка
+  записана тогда, когда её `oldValue` сдвинулся относительно снимка; `AfterUpdate::$count === 0` — ничего.
+- **`observe()` и `active_record.models` есть и в Yii3**: `Event\ObservedDispatcher` оборачивает диспетчер класса из
+  `EventDispatcherProvider` (его атрибутные обработчики идут первыми). Классу всё равно нужен `EventsTrait`.
+- **`ObserverProvider` без `set()`** — один `E_USER_WARNING` на процесс (у обработчиков атрибута нет логгера), затем тишина.
+- **Словарь**: `router.locale_parameter` по умолчанию `_language`; `debounce.store` по умолчанию — id `Psr\SimpleCache\CacheInterface`
+  контейнера; `active_record.namespaces` (`App\Model`, `App\Entity`) для коротких имён в командах; `checks` — список id
+  контейнера. `set_app_locale` не введён (в Yii3 нет глобальной локали приложения).
+- **Команды**: `indexnow:check`, `indexnow:config`, `indexnow:submit`, `indexnow:submit-record`, `indexnow:explain`,
+  `indexnow:key:generate`, `indexnow:sitemap`, `indexnow:history`, `indexnow:status`; без пакета — стабы с тем же именем
+  (`params-console.php` выбирает класс по `class_exists` маркера). Коды `check`: `dispatch.mode`, `router.key_file`,
+  `router.route`, `active_record.enabled` (ошибка, если bootstrap не отработал).
+- **Тесты**: контейнер `yiisoft/di` из `config/*.php` пакета (без merge-plan: файлы подключаются с `$params`), sqlite в памяти,
+  реальный роутер (`Router` middleware + fastroute) для H01–H03, `AfterEmit`/`ApplicationShutdown` через диспетчер из
+  `events-*.php` для H06. C01–C22, A01–A21 (+A05b/A05c/A10b), H01–H06 зелёные.
+
 ## Открытое
 
-- `yiisoft/queue` стабильный релиз → `dispatch: queue` для Yii3.
+- `yiisoft/queue` стабильный релиз → `dispatch: queue` для Yii3 (на 2026-09-07 на Packagist только dev-ветки).
 - Cycle ORM (`yiisoft/yii-cycle`, Spiral) — отдельный `indexnowkit/cycle` при спросе: два потребителя, свои
   события (`cycle/entity-behavior`), транзакции через `EntityManager` — кандидат на `TransactionStaging`.
 - Yii2 без pretty URL: файл ключа доступен только как `?r=indexnow/key-file/index&key=` — движки его не найдут;

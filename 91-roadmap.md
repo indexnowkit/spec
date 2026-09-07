@@ -145,6 +145,10 @@
   в сами пакеты) — первая задача Yii3-волны.
 - 2026-09-07 (волна I): A10 сделан (спека 17 §16.3): `{Verify,History,Sitemap}\Adapter\*Services` в самих пакетах, три адаптера
   делегируют (Yii2 удалил копии), `conflict` с verify <0.3 / history <0.3 / sitemap <0.7. Выпущено 2026-09-07. Аудит 0.10 закрыт полностью; дальше Yii3.
+- **Yii3 (спека 15) — `indexnowkit/yii3` 0.1.0 написан 2026-09-07**: конфиг-плагин `yiisoft/config`, `#[IndexNowEvents]` + `EventsTrait`,
+  verify-on-commit через `VerifyingStaging` со сбросом на `AfterEmit`/`ApplicationShutdown`, граф `ServicesBuilder` над контейнером
+  (каждый узел — definition), PSR-15 файл ключа, девять `indexnow:*` команд, C01–C22 / A01–A21 / H01–H06 зелёные. Ядро не менялось —
+  критерий формы `Services`/`VerifyingStaging` спеки 17 §7 подтверждён (§16.4). Релиз (testing 0.3.2, yii3 0.1.0) — после пуша и CI.
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,

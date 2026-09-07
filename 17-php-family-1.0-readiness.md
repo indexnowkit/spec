@@ -831,3 +831,28 @@ doctrine 0.8.1, symfony-bundle 0.13.0, laravel 0.13.1, yii2 0.12.0. CI 67/67 (н
 
 ВЫПУЩЕНО 2026-09-07 (subtree 1b2a9df): verify 0.3.0, history 0.3.0, sitemap 0.7.0, symfony-bundle 0.14.0, laravel 0.14.0,
 yii2 0.13.0. CI 67/67. Аудит 0.10 закрыт полностью.
+
+### 16.4. Yii3 — критерий формы `Services`/`VerifyingStaging` (2026-09-07)
+
+`indexnowkit/yii3` 0.1.0 (спека 15, «Уточнения по реализации (Yii3)») написан на core 0.12 **без единого изменения ядра**:
+ни новых узлов или методов `ServicesBuilder`, ни правок `VerifyingStaging`. Вердикт критерия §7: **форма подтверждена**,
+`Adapter\Services`/`ServicesBuilder` и `Transaction\VerifyingStaging` остаются в core.
+
+Что показал второй потребитель:
+
+- `ServicesBuilder` покрыл и контейнерный адаптер: Yii3 читает каждый узел из контейнера `yiisoft/di` (замыкание
+  `fn() => $container->get(Interface)`), а умолчания definitions строит той же фабрикой ядра над графом «все узлы кроме
+  этого из контейнера». Ни один узел не пришлось дублировать в стиле слоя 1 (бандл/Laravel), парити с `IndexNowKit::create()`
+  держится тестом ядра `ServicesParityTest` и тестом пакета `WiringTest`.
+- `VerifyingStaging` хватило и без commit-событий вообще: `stage()` по соединению, `flush()` в конце запроса/команды,
+  `rowMatches()` для проверки; единственное дополнение адаптера — не сбрасывать соединение с ещё открытой транзакцией
+  (логика адаптера, не ядра).
+- Аддитивно в `indexnowkit/testing` 0.3.2: `ReadmeAssertions::FAMILY_COMMANDS` знает `indexnow:submit-record`,
+  `ConformanceIdsTest` проверяет H01–H06 у `yii3`.
+
+Вне объёма Yii3, замечено при написании (решение пользователя): `Laravel\Config\ConfigFactory`, бандл и Yii2 зовут
+`SitemapServices::package()`/`VerifyServices::package()`/`HistoryServices::package()` безусловно, а эти классы лежат в самих
+опциональных пакетах — установка адаптера **без** `indexnowkit/sitemap|verify|history` даст `Class not found` при первой сборке
+конфига (тесты волны I прогоняли только `installed: false` при физически установленных пакетах). Yii3 строит
+`Adapter\OptionalPackage` напрямую. Кандидаты на исправление в трёх адаптерах патчами: то же самое (три литерала на пакет)
+или `OptionalPackage::sitemap()/verify()/history()` в core с именами и маркерами.
