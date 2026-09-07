@@ -14,6 +14,7 @@
 | 17-php-family-1.0-readiness.md | PHP к 1.0: пакеты `testing`/`console`/`history`/`verify`, DX для людей и AI-ассистентов, эксплуатация (`check --json --strict`, стейджинг, ротация), SEO-честность, дистрибуция |
 | 18-php-shared-console-commands.md | Волна L (после Yii3, до Битрикса): команды symfony/console живут в `console`/`sitemap`/`history`, адаптеры (бандл, Yii3) только регистрируют их; `ConfigSourceInterface`; PSR-15 `Key\KeyFileRequestHandler` в core; фаза B `bin/indexnow` — волна Битрикса |
 | 19-php-leftovers-and-psr.md | Волна M (аудит после L): замер сходства всех одноимённых классов адаптеров, 12 гипотез с цифрами (Laravel регистрирует классы `indexnowkit/console` — спека 18 §9 ошиблась; сэмплер ×4, `LocalesCheck`, `BatchingDispatcher`, `RouteOrigin`, `isShared()`), ревизия PSR-1…20 по тексту стандартов, `[решение]` |
+| 19b-php-cli-phar-action.md | Волна N (фаза B спеки 18): пакет `indexnowkit/cli` — `indexnow` без фреймворка (cron на любой CMS, Битрикс через штатный sitemap), файл состояния sqlite (дебаунс, история, `--new-only`), PHAR (Box), Docker-образ GHCR, GitHub Action на образе; факты со строками, риски проверены, `[решение]` |
 | 20–25 | Python: core, Django, SQLAlchemy, FastAPI, Flask, Wagtail |
 | 30–39 | JS/TS: core, Prisma, TypeORM, Drizzle/Mongoose/Sequelize, Next, Nuxt, SvelteKit/RR7, NestJS, Payload, Strapi/Directus/Sanity |
 | 40–44 | Rails, Go, Spring Boot, .NET, прочее |
