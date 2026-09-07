@@ -1,6 +1,24 @@
 # 19. Волна M: остатки «велосипедов» после волны L и ревизия PSR по всему семейству
 
-Статус: **аудит завершён 2026-09-07, решения §6 — у пользователя; код не менялся.** Реализация — по `docs/plans/wave-m-execution-prompt.md`.
+Статус: **реализовано 2026-09-07** (волна M, девять коммитов по пакетам поверх 02c667c, до пуша; решения §6 — по рекомендациям:
+1 да, 2 (a), 3 да, 4 (a), 5 да, 6 нет, 7 да, 8 нет). Отклонения от §4, записанные при реализации:
+(1) §4.10 `about` Laravel — не `notInstalledMessage()`, а `checkLine([])` без слова-фичи (`not installed (composer require …)`):
+два теста `tests/Feature/*NotInstalledTest` проверяют эту подстроку, сценарии не тронуты;
+(2) §4.4 Laravel `ChecksTest` и Yii2 `ChecksTest` конструировали удалённые `RouterCheck` — переписаны на `Check\LocalesCheck` (те же
+проверки; Yii2 — при пустом списке и без просящих классов строки нет, раньше был ok, как и записано в §4.4);
+(3) §4.6 `RouteOrigin::expand()` — флаг `bool &$warned = false` вместо `?bool` (phpstan: свойство `bool` адаптера); Laravel оставляет
+свой текст `Cannot generate route "%s": no route has that name.` (роутер возвращает null, не бросает — `generationFailed()` не применим);
+(4) §4.3 маркер `AbstractSubjectLoader` — `is_a($class, $marker, true)`, не `is_subclass_of` (класс-маркер сам проходит);
+текст guard — тот же, что у `ClassNameResolver`, один на семейство; `findOne()`/`findMany()` без `$how`;
+(5) §2.9 `YiiCacheDebounceStore` → `Psr16DebounceStore`: `filterRecent(…, 0)` больше не возвращает `[]` (окно 0 — дело сабмиттера,
+стор его не спрашивает) — тест переехал с этой поправкой; (6) §4.10 Yii3 `ObserverProvider::set(…, ?LoggerInterface)` — логгер
+живёт после `reset()` (`resetLogger()` для тестов), иначе ветка недостижима; (7) бандл: закрытие `LocalesCheck` над метаданными —
+отдельный `Check\MappedClasses` (замыкание нельзя описать в DI без класса); `HistoryServices` бандла тоже держал три `in_array` —
+убраны; (8) `SubmitUrlsMessage::newId()`, `SubmitUrlsJob::newId()` ×2 оставлены делегатами на `BatchingDispatcher::newJobId()`.
+Не сделано: ничего из §4. Найдено до волны и не чинилось (не в её границах): `bin/taint core` — `TaintedHtml` в
+`tests/Taint/entrypoints.php:37` (`echo` тела ключ-файла в харнесе; воспроизводится на 02c667c); `bin/ci symfony-bundle symfony64` и
+`lowest` — `ignore.unmatchedLine` в `tests/App/Controller/ArticleController.php:50` и `tests/Functional/MessengerDispatchTest.php:47`
+(phpstan level 6 по тестам на другом vendor). Аудит — 2026-09-07, тем же днём.
 
 ## 0. Цель и границы
 
@@ -533,14 +551,14 @@ final class RouteOrigin
 
 ## 8. Definition of Done волны M
 
-- [ ] §4.1 выполнен: `laravel/src/Console/` = `ModelLoader.php` + `ConfigSource.php`; `tests/Feature/*` зелёные без правки сценариев; `php artisan list`
+- [x] §4.1 выполнен: `laravel/src/Console/` = `ModelLoader.php` + `ConfigSource.php`; `tests/Feature/*` зелёные без правки сценариев; `php artisan list`
       в Testbench не трогает транспорт; `indexnow:submit-model` — ленивая.
-- [ ] console 0.5.0: `SubjectSampler`, `classArgument` у двух команд, (`AbstractSubjectLoader` по §6.3), `laravelSignature()` по §6.2; четыре сэмплера адаптеров удалены.
-- [ ] core 0.13.0: `Check\LocalesCheck`, `Dispatch\BatchingDispatcher`, `Url\RouteOrigin`, `DebounceStoreFactory::isShared()`, `DebounceStoreCheck::PROBE_KEY`,
+- [x] console 0.5.0: `SubjectSampler`, `classArgument` у двух команд, (`AbstractSubjectLoader` по §6.3), `laravelSignature()` по §6.2; четыре сэмплера адаптеров удалены.
+- [x] core 0.13.0: `Check\LocalesCheck`, `Dispatch\BatchingDispatcher`, `Url\RouteOrigin`, `DebounceStoreFactory::isShared()`, `DebounceStoreCheck::PROBE_KEY`,
       `Check\DispatchLine`, `Psr18Transport::discover()`/`TransportFactory::lazy()` с фабриками, (`OptionalPackage` опции по §6.7); все девять `in_array`
       и четыре текста роутера ушли (grep пустой).
-- [ ] sitemap 0.8.0: часы в `SitemapRunner`; history 0.4.0: `describeStore()`; yii2 0.14.0: `YiiCacheDebounceStore` удалён, `YiiLogger` бросает; бандл 0.15.0:
+- [x] sitemap 0.8.0: часы в `SitemapRunner`; history 0.4.0: `describeStore()`; yii2 0.14.0: `YiiCacheDebounceStore` удалён, `YiiLogger` бросает; бандл 0.15.0:
       `FlushListener` на замыкании; yii3 0.1.0: `ObserverProvider` с логгером; Laravel `about` — `notInstalledMessage()`.
-- [ ] Документация: `bc.md` (laravel, console, bundle), `check-codes.md`, `adapters.md` §11/§12/§13, CHANGELOG каждого затронутого пакета, спека 19 —
+- [x] Документация: `bc.md` (laravel, console, bundle), `check-codes.md`, `adapters.md` §11/§12/§13, CHANGELOG каждого затронутого пакета, спека 19 —
       статус «реализовано» с отклонениями, спека 18 §9 — сноска «первый пункт опровергнут спекой 19 §2.1».
-- [ ] Гейт §5 зелёный; коммиты conventional без attribution; пуша нет; память `project-wave-m-leftovers` обновлена.
+- [x] Гейт §5 зелёный; коммиты conventional без attribution; пуша нет; память `project-wave-m-leftovers` обновлена.
