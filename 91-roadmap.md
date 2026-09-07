@@ -151,8 +151,9 @@
   критерий формы `Services`/`VerifyingStaging` спеки 17 §7 подтверждён (§16.4). Hotfix §16.4 (адаптеры без опциональных пакетов:
   `OptionalPackage::sitemap()/verify()/history()` в core 0.13.0, CI-джоба `optional-packages-absent`) написан 2026-09-07.
   **Аудит 0.13** (`docs/plans/audit-0.13.md`, спека 17 §16.5): 2 CRITICAL (R1 verify-on-commit по типам, W1 `dry_run` через
-  `(bool)`), 18 HIGH, ~40 MEDIUM — большинство в yii3; план: блок 1 до тега волны, блоки 2–4 волной K. Релиз волны — после
-  решения пользователя по порядку.
+  `(bool)`), 18 HIGH, ~40 MEDIUM — большинство в yii3; **закрыт полностью до тега** (решение пользователя; спека 17 §16.5).
+  Версии волны: core 0.13.0, console 0.4.2, testing 0.3.2, sitemap 0.8.0, verify 0.4.0, history 0.3.1, doctrine 0.9.0,
+  symfony-bundle 0.15.0, laravel 0.15.0, yii2 0.14.0, yii3 0.1.0. Релиз — по «действуй».
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
