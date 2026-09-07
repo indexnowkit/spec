@@ -276,7 +276,8 @@ final class KeyFileRequestHandler implements RequestHandlerInterface, Middleware
 
 - **Общий `CacheProbe`/`RouterCheck`**: 26–98 строк, 39–55 % сходства — фреймворковые обёртки; общий код уже в core (`Check\*`).
 - **Перевод Laravel на symfony/console-классы**: artisan-команды обязаны наследовать `Illuminate\Console\Command`; обёртки уже
-  тонкие (28–63 строки), `Definitions::laravelSignature()` — их общий код.
+  тонкие (28–63 строки), `Definitions::laravelSignature()` — их общий код. **Опровергнуто спекой 19 §2.1 (2026-09-07)**:
+  `Illuminate\Console\Application::add()/resolve()` принимают любой `Symfony\Component\Console\Command\Command`; перевод — волна M.
 - **`Wiring`-паттерн yii3 для провайдера Laravel** (610 строк против 435): переписывание композиции без выгоды пользователю;
   критерий формы `Services` пройден (§16.4), третий контейнерный адаптер решит, нужен ли общий каркас.
 
