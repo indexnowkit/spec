@@ -924,8 +924,8 @@ yii3. Функциональные тесты команд бандла и Yii3 
 Волна M (спека 19: остатки «велосипедов» после L и ревизия PSR) реализована 2026-09-07 и выпущена **2026-09-08** (subtree
 0f65fac; `php/CHANGELOG.md` «2026-09-08», абзац «Wave M»): core 0.13.0, console 0.5.0, testing 0.3.2, sitemap 0.8.0,
 verify 0.4.0, history 0.4.0, doctrine 0.9.0, symfony-bundle 0.15.0, laravel 0.15.0, yii2 0.14.0 — Packagist, GitHub releases,
-`packagist-check --strict` ×10 в синхроне; yii3 0.1.0 — тег после регистрации `indexnowkit/yii3` на Packagist (репо
-`php-yii3`, deploy-key и секрет `SPLIT_SSH_KEY_YII3` есть, `main` доехал split-джобой). Первый CI-прогон волны нашёл то,
+`packagist-check --strict` ×11 в синхроне; yii3 0.1.0 — тем же днём, после регистрации `indexnowkit/yii3` на Packagist
+пользователем (репо `php-yii3`, deploy-key и секрет `SPLIT_SSH_KEY_YII3`, `main` split-джобой, split-CI зелёный). Первый CI-прогон волны нашёл то,
 чего локальный гейт на PHP 8.3 не видел, — починено до тегов: `COMPOSER=composer.monorepo.json` на уровне джобы ломал
 `composer install` инструментов (`tools/psalm`, `tools/infection`: taint ×5 и mutation ×5 красные с волны K); PHP 8.5
 объявил `SplObjectStorage::attach()/detach()/contains()` устаревшими (три observer'а, `ViaWalk`, parity-тест — на

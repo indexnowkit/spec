@@ -20,8 +20,8 @@
 `KeyValidator`); `bin/ci symfony-bundle symfony64|lowest` — два `ignore.unmatchedLine` в тестах (ignore, срабатывавшие на одном vendor
 и не на другом, заменены кодом без ignore). Аудит — 2026-09-07, тем же днём.
 **Выпущено 2026-09-08** (subtree 0f65fac; спека 17 §16.6): core 0.13.0, console 0.5.0, testing 0.3.2, sitemap 0.8.0, verify 0.4.0,
-history 0.4.0, doctrine 0.9.0, symfony-bundle 0.15.0, laravel 0.15.0, yii2 0.14.0 на Packagist с GitHub releases; yii3 0.1.0 —
-тег после регистрации `indexnowkit/yii3` на Packagist (репо `php-yii3` получил `main`).
+history 0.4.0, doctrine 0.9.0, symfony-bundle 0.15.0, laravel 0.15.0, yii2 0.14.0, yii3 0.1.0 на Packagist с GitHub releases
+(yii3 — после регистрации `indexnowkit/yii3` на Packagist пользователем, тем же днём).
 
 ## 0. Цель и границы
 

@@ -158,7 +158,7 @@
   0.4.0), Laravel регистрирует их через artisan; общие классы адаптеров в core/console (`LocalesCheck`, `BatchingDispatcher`,
   `RouteOrigin`, `SubjectSampler`, `AbstractSubjectLoader`), PSR по букве. **Выпущено 2026-09-08** (спека 17 §16.6): core 0.13.0,
   console 0.5.0, testing 0.3.2, sitemap 0.8.0, verify 0.4.0, history 0.4.0, doctrine 0.9.0, symfony-bundle 0.15.0, laravel
-  0.15.0, yii2 0.14.0; yii3 0.1.0 — тег после регистрации `indexnowkit/yii3` на Packagist. Дальше Битрикс + `bin/indexnow`.
+  0.15.0, yii2 0.14.0, yii3 0.1.0 (первый релиз `indexnowkit/yii3` на Packagist). Дальше Битрикс + `bin/indexnow`.
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
