@@ -850,9 +850,20 @@ yii2 0.13.0. CI 67/67. Аудит 0.10 закрыт полностью.
 - Аддитивно в `indexnowkit/testing` 0.3.2: `ReadmeAssertions::FAMILY_COMMANDS` знает `indexnow:submit-record`,
   `ConformanceIdsTest` проверяет H01–H06 у `yii3`.
 
-Вне объёма Yii3, замечено при написании (решение пользователя): `Laravel\Config\ConfigFactory`, бандл и Yii2 зовут
-`SitemapServices::package()`/`VerifyServices::package()`/`HistoryServices::package()` безусловно, а эти классы лежат в самих
-опциональных пакетах — установка адаптера **без** `indexnowkit/sitemap|verify|history` даст `Class not found` при первой сборке
-конфига (тесты волны I прогоняли только `installed: false` при физически установленных пакетах). Yii3 строит
-`Adapter\OptionalPackage` напрямую. Кандидаты на исправление в трёх адаптерах патчами: то же самое (три литерала на пакет)
-или `OptionalPackage::sitemap()/verify()/history()` в core с именами и маркерами.
+Замечено при написании, **исправлено в этой же волне** (core 0.13.0, symfony-bundle 0.14.1, laravel 0.14.1, yii2 0.13.1):
+`Laravel\Config\ConfigFactory`, провайдер, `IndexNowKitConfiguration`/`IndexNowKitLoader` бандла и `Config\ConfigFactory` /
+`IndexNowComponent` Yii2 звали `SitemapServices::package()`/`VerifyServices::package()`/`HistoryServices::package()`
+безусловно, а эти классы лежат в самих опциональных пакетах — установка адаптера **без** `indexnowkit/sitemap|verify|history`
+давала `Error: Class "IndexNowKit\Sitemap\Adapter\SitemapServices" not found` при первой сборке конфига (воспроизведено
+2026-09-07 во всех трёх, убрав пакеты из `vendor/`; тесты волны I прогоняли только `installed: false` при физически
+установленных пакетах и проверяли тексты, а не загрузку). Yii3 строил `Adapter\OptionalPackage` напрямую и дефекта не имел.
+Исправление — вариант «в core»: `Adapter\OptionalPackage::sitemap(?bool)`, `verify(?bool)`, `history(?bool)` с именами
+пакетов, маркерами-строками (`'IndexNowKit\Sitemap\SitemapReader'`, `'IndexNowKit\Verify\PageSignals'`,
+`'IndexNowKit\History\HistoryConfig'`; core не ссылается на классы пакетов) и feature-именами; `*Services::package()` трёх
+пакетов делегируют им (sitemap 0.7.1, verify 0.3.1, history 0.3.1), четыре адаптера (включая Yii3) зовут методы core
+напрямую. Аддитивный минор core, тир Call в `bc.md`; `adapters.md` §2 «Optional packages» — «спрашивай core, не пакет».
+Доказательство — новая CI-джоба `optional-packages-absent` (матрица по четырём адаптерам): `composer remove --dev` трёх
+пакетов, затем `OptionalPackagesDetectionTest` адаптера с `INDEXNOWKIT_OPTIONAL_PACKAGES=absent`
+(`Testing\Conformance\OptionalPackageAssertions::assertDetected()`: предикаты в детекции, `check` называет ровно отсутствующие
+пакеты, при переменной окружения их отсутствие — утверждение, а не ветка). Следствие: все пакеты требуют `core ^0.13`
+(console 0.4.2, doctrine 0.8.2 — патчи только с ограничением, testing 0.3.2 — плюс `OptionalPackageAssertions`).

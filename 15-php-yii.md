@@ -15,7 +15,7 @@
 | Дебаунс | `yii\caching\CacheInterface` (`YiiCacheDebounceStore`) | PSR-16 из контейнера (`Psr16DebounceStore`) |
 | Тесты | PHPUnit 11, `yii\web\Application`/`yii\console\Application` в памяти, sqlite | PHPUnit 11, `yiisoft/di` контейнер из конфигов пакета, sqlite (`yiisoft/db-sqlite`) |
 
-Оба: `indexnowkit/core` (yii2 0.13 и yii3 0.1 — `^0.12`), `indexnowkit/console ^0.4`, phpstan 9 + strict-rules, php-cs-fixer монорепо, split-репо `php-yii2`, `php-yii3`.
+Оба: `indexnowkit/core` (yii2 0.13.1 и yii3 0.1 — `^0.13`), `indexnowkit/console ^0.4`, phpstan 9 + strict-rules, php-cs-fixer монорепо, split-репо `php-yii2`, `php-yii3`.
 
 ## Почему Yii, и почему вместе
 
