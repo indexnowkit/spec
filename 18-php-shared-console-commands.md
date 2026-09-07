@@ -1,6 +1,6 @@
 # 18. Общие консольные команды семейства indexnowkit/php (волна L, после Yii3, до Битрикса)
 
-Статус: **проект, ждёт решений §10** (2026-09-07). Основание: сравнение четырёх адаптеров после закрытия аудита 0.13 и волны K
+Статус: **принят 2026-09-07** (решения §10: до пуша, фаза B в волне Битрикса, интерфейс в console, PSR-15 обработчик — в этой же волне). Реализация — по `docs/plans/wave-l-console-commands-prompt.md`. Основание: сравнение четырёх адаптеров после закрытия аудита 0.13 и волны K
 (`docs/plans/audit-0.13.md`, спека 17 §16.5). Язык — словарь ядра (`core/docs/adapters.md` «Names»), полные слова.
 
 ## 0. Цель и границы
@@ -12,6 +12,9 @@ Yii3 — третий адаптер на `Symfony\Component\Console` (посл�
 (`indexnowkit/console`, `sitemap`, `history`), адаптер на symfony/console только **регистрирует** их и поставляет то, что
 варьируется. Следствия: минус ≈ 900 строк в бандле и yii3, четвёртый symfony/console-потребитель (Битрикс через `bin/indexnow`,
 plain PHP — §8) получает команды даром, а правка команды перестаёт быть правкой в трёх местах.
+
+Вторая, малая часть волны — §3.5: PSR-15 обработчик ключ-файла в core, чтобы любой PSR-7/PSR-15 стек (Slim, Mezzio, Laminas,
+будущие адаптеры) отдавал `/<key>.txt` без своего класса; Yii3 делегирует ему.
 
 Не в границах: artisan-команды Laravel (другой базовый класс, `Definitions::laravelSignature()` уже делает их тонкими),
 `Yii2\Console\IndexNowController` (контроллер Yii2, `yiiOptions()`), `Check\CacheProbe` и `Check\RouterCheck` трёх адаптеров
@@ -141,6 +144,43 @@ IndexNowKit\History\Console\StatusCommand    { __construct(StatusRunner $runner)
 
 **laravel, yii2** — без изменений в коде; `require` `indexnowkit/console ^0.5` (каскад версии).
 
+### 3.5. PSR-15 обработчик ключ-файла в core (тир Call)
+
+Сегодня `KeyFileResponder` (core) отдаёт тело и заголовки, а HTTP-ответ собирает каждый адаптер сам: бандл и Laravel — на своих
+`Response`, Yii3 — на PSR-7 (`Http\KeyFileHandler`, 56 строк, ключ из аргумента маршрута). PSR-7/PSR-15 — единственный
+фреймворко-независимый способ, и ядро уже требует `psr/http-message` и `psr/http-factory`. Добавляется:
+
+```php
+namespace IndexNowKit\Key;
+
+/** GET /<key>.txt over PSR-7: the key itself for a key of the requested host, 404 otherwise; as a middleware, a path that is not a key file goes on to the next handler. */
+final class KeyFileRequestHandler implements RequestHandlerInterface, MiddlewareInterface
+{
+    public function __construct(KeyFileResponder $responder, Config $config, ResponseFactoryInterface $responses, StreamFactoryInterface $streams) {}
+    public static function fromConfig(Config $config, KeyProviderInterface $keys, ResponseFactoryInterface $responses, StreamFactoryInterface $streams): self {}
+    /** RequestHandlerInterface: the key is the path (`KeyFileResponder::PATH_PATTERN`), the host the request's URI host. */
+    public function handle(ServerRequestInterface $request): ResponseInterface {}
+    /** MiddlewareInterface: answers when the path is a key file of this host, otherwise `$handler->handle($request)`. */
+    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface {}
+    /** The response for a key the router already extracted (Yii3: the `{key}` argument of the route): the body of `bodyForKey()`, or 404. */
+    public function respond(?string $key, ServerRequestInterface $request): ResponseInterface {}
+}
+```
+
+- Заголовки — `Config::keyFileHeaders()` (`text/plain`, `Cache-Control`, `Vary: Host` при карте хостов или `strict_hosts`),
+  тело — `KeyFileResponder::bodyForPath()` / `bodyForKey()`; ничего нового в семантике, только сборка PSR-7 ответа в одном месте.
+- Зависимости core: `psr/http-server-handler ^1.0`, `psr/http-server-middleware ^1.0` в `require` (PSR, без транзитивных
+  зависимостей — правило «core — PSR-only» соблюдено); `nyholm/psr7` уже в `require-dev` для тестов.
+- **Yii3** `Http\KeyFileHandler` остаётся (маршрут с произвольным `key_file.pattern` и `CurrentRoute`), но делегирует:
+  `return $this->handler->respond($this->currentRoute->getArgument('key'), $request);` — минус ~25 строк; определение
+  `KeyFileRequestHandler::class` в `di-web.php` из `Wiring` (responder, config, PSR-17 фабрики контейнера).
+- Бандл и Laravel не трогать (HttpFoundation / Illuminate `Response` — не PSR-7; конвертировать через bridge ради 30 строк незачем).
+- `core/docs/adapters.md` §«Key file»: PSR-15 путь — первый рецепт для нового адаптера; `operations.md` — строка «за прокси/CDN
+  на любом PSR-15 стеке: middleware до роутера». `bc.md`: класс в тире Call, `psr/http-server-*` в списке зависимостей ядра.
+- Тесты core: `Unit/Key/KeyFileRequestHandlerTest` на `nyholm/psr7` — ключ по пути, ключ по `respond()`, чужой хост → 404,
+  не ключ-файл → middleware передаёт дальше, заголовки при `hosts`/`strict_hosts`, `key_file.enabled: false` → 404;
+  yii3 `KeyFileTest` зелёный без правок.
+
 ### 3.4. Что варьируется и как входит
 
 | Варьируется | Как входит в команду | bundle | yii3 |
@@ -155,6 +195,8 @@ IndexNowKit\History\Console\StatusCommand    { __construct(StatusRunner $runner)
 
 ## 4. BC и версии
 
+- `indexnowkit/core` 0.13.0 (Unreleased, аддитивно): `Key\KeyFileRequestHandler` (тир Call), `psr/http-server-handler` и
+  `psr/http-server-middleware` в `require`; CHANGELOG «Added».
 - `indexnowkit/console` **0.5.0** (сейчас 0.4.2 Unreleased): новые классы `Command\*` (тир Call, конструкторы — именованные
   аргументы, растут только аддитивно), `ConfigSourceInterface` (тир Implement: методы не добавляются без мажора;
   до 1.0 — как у остальных Implement). `docs/bc.md` console — строка «Commands»: классы, их имена, что `#[AsCommand]`-имя —
@@ -178,7 +220,7 @@ IndexNowKit\History\Console\StatusCommand    { __construct(StatusRunner $runner)
 - Бандл и yii3: существующие функциональные тесты команд остаются зелёными без правок тел; `ContainerShapeTest` бандла и
   `WiringTest`/`ConsoleCommandMapTest` yii3 — обновить имена классов; `ReadmeAiNotesTest` — без изменений (имена команд те же).
 - `testing`: `ReadmeAssertions::FAMILY_COMMANDS` не меняется. Конформанс H01–H06 не затронут.
-- Гейт семьи: `bin/ci` console, sitemap, history, symfony-bundle (highest + `symfony64` + `symfony8`), yii3 (highest + lowest),
+- Гейт семьи: `bin/ci` core (highest и lowest на PHP 8.2 — §3.5), console, sitemap, history, symfony-bundle (highest + `symfony64` + `symfony8`), yii3 (highest + lowest),
   laravel, yii2, doctrine (constraint), `optional-packages-absent` локально для бандла и yii3 (стабы регистрируются без пакетов —
   именно этот путь меняется), `bin/cs`, `bin/mutation console` и `bin/taint console` (console в матрице T20; harness
   `tests/Taint/entrypoints.php` дополнить `CheckCommand`/`ConfigCommand` через `ConfigSourceInterface` с `$_POST`),
@@ -226,24 +268,20 @@ IndexNowKit\History\Console\StatusCommand    { __construct(StatusRunner $runner)
 
 ## 9. Не делать (рассмотрено)
 
-- **PSR-15 обработчик ключ-файла в core** (`Key\KeyFileRequestHandler` над `KeyFileResponder::bodyForPath()` и PSR-17): 56 строк
-  у yii3, но Yii3 берёт ключ из аргумента маршрута (`CurrentRoute`, произвольный `key_file.pattern`), а не из пути, так что
-  yii3 обработчик не заменит; ценность — только для будущего PSR-15 адаптера (Slim, Mezzio), которого нет. YAGNI; вернуться,
-  когда такой адаптер появится. Зависимость `psr/http-server-handler` в core не добавлять заранее.
 - **Общий `CacheProbe`/`RouterCheck`**: 26–98 строк, 39–55 % сходства — фреймворковые обёртки; общий код уже в core (`Check\*`).
 - **Перевод Laravel на symfony/console-классы**: artisan-команды обязаны наследовать `Illuminate\Console\Command`; обёртки уже
   тонкие (28–63 строки), `Definitions::laravelSignature()` — их общий код.
 - **`Wiring`-паттерн yii3 для провайдера Laravel** (610 строк против 435): переписывание композиции без выгоды пользователю;
   критерий формы `Services` пройден (§16.4), третий контейнерный адаптер решит, нужен ли общий каркас.
 
-## 10. `[решение]`
+## 10. `[решение]` — приняты 2026-09-07
 
-1. **Когда**: (а) **до пуша текущей волны** — все затронутые версии ещё Unreleased (console 0.4.2 → 0.5.0, history 0.3.1 → 0.4.0,
-   бандл 0.15.0 уже несёт «Changed», yii3 0.1.0 не выйдет с дубликатами); цена — ещё один день до пуша и повторный полный гейт;
-   (б) после релиза волны — тогда bundle 0.16.0, yii3 0.2.0 с «Changed» через неделю после 0.1.0. Рекомендация — (а).
-2. **Фаза B (`bin/indexnow`)**: (а) в волне Битрикса (рекомендация); (б) сразу, как часть L; (в) не делать.
-3. **Имя интерфейса и место**: `Console\ConfigSourceInterface` в `indexnowkit/console` (рекомендация) или в core
-   (`Adapter\ConfigSourceInterface`) — в core он был бы виден Laravel/Yii2, которым не нужен.
+1. **Когда**: **до пуша текущей волны** — все затронутые версии ещё Unreleased (console 0.4.2 → 0.5.0, history 0.3.1 → 0.4.0,
+   бандл 0.15.0 уже несёт «Changed», yii3 0.1.0 не выйдет с дубликатами); цена — ещё один день до пуша и повторный полный гейт.
+   Отклонено: после релиза (bundle 0.16.0, yii3 0.2.0 с «Changed» через неделю после 0.1.0).
+2. **Фаза B (`bin/indexnow`)**: в волне Битрикса. Конструкторы §3.1 проектируются так, чтобы фаза B их не меняла.
+3. **`Console\ConfigSourceInterface` — в `indexnowkit/console`** (в core он был бы виден Laravel/Yii2, которым не нужен).
+4. **PSR-15 обработчик ключ-файла (§3.5) — в этой же волне**, в core 0.13.0 аддитивно; Yii3 делегирует.
 
 ## 11. Definition of Done
 
@@ -252,6 +290,8 @@ IndexNowKit\History\Console\StatusCommand    { __construct(StatusRunner $runner)
   `history/src/Console/{HistoryCommand,StatusCommand}.php`; тесты на `CommandTester` для каждой.
 - Функциональные тесты команд бандла и yii3 зелёные без правки сценариев; `optional-packages-absent` для обоих зелёный локально.
 - `ContainerShapeTest`: каждый `console.command` ленив (атрибут `command` или `#[AsCommand]`).
+- `core/src/Key/KeyFileRequestHandler.php` с тестом на nyholm/psr7; `yii3/src/Http/KeyFileHandler.php` делегирует ему; `bin/ci core`
+  highest и lowest (PHP 8.2) зелёные; `psr/http-server-*` в `require` core.
 - Версии и `require` по §4; CHANGELOG'и; `bc.md` console/бандла/yii3; `adapters.md` §Console; спеки 12/15/17.
 - Полный гейт семьи зелёный (§5); коммиты conventional (`feat(console)`, `feat(sitemap)`, `feat(history)`, `refactor(symfony-bundle)`,
   `refactor(yii3)`, `chore(deps)` для констрейнтов, `docs(spec)`); пуш/релиз — отдельным «действуй».

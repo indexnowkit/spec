@@ -12,7 +12,7 @@
 | 10–15 | PHP: core, Doctrine, Symfony, Laravel, API Platform/CMS, Yii2/Yii3 |
 | 16-core-0.4-adapter-kit.md | PHP core 0.4/0.5 «adapter kit»: пакет `indexnowkit/sitemap`, `Adapter\ConfigFactory`, фабрики, `Adapter\Services`, общие блоки адаптеров |
 | 17-php-family-1.0-readiness.md | PHP к 1.0: пакеты `testing`/`console`/`history`/`verify`, DX для людей и AI-ассистентов, эксплуатация (`check --json --strict`, стейджинг, ротация), SEO-честность, дистрибуция |
-| 18-php-shared-console-commands.md | Волна L (после Yii3, до Битрикса): команды symfony/console живут в `console`/`sitemap`/`history`, адаптеры (бандл, Yii3) только регистрируют их; `ConfigSourceInterface`; фаза B `bin/indexnow` для plain PHP и CMS |
+| 18-php-shared-console-commands.md | Волна L (после Yii3, до Битрикса): команды symfony/console живут в `console`/`sitemap`/`history`, адаптеры (бандл, Yii3) только регистрируют их; `ConfigSourceInterface`; PSR-15 `Key\KeyFileRequestHandler` в core; фаза B `bin/indexnow` — волна Битрикса |
 | 20–25 | Python: core, Django, SQLAlchemy, FastAPI, Flask, Wagtail |
 | 30–39 | JS/TS: core, Prisma, TypeORM, Drizzle/Mongoose/Sequelize, Next, Nuxt, SvelteKit/RR7, NestJS, Payload, Strapi/Directus/Sanity |
 | 40–44 | Rails, Go, Spring Boot, .NET, прочее |
