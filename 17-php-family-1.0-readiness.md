@@ -918,3 +918,20 @@ sitemap-джоба была пустой), `history/Pdo\Schema::table()` с `@ps
 делегирует. Каскад: `console ^0.5` у sitemap, history, бандла, laravel, yii2, yii3; `history ^0.4` у бандла, laravel, yii2,
 yii3. Функциональные тесты команд бандла и Yii3 зелёные без правки сценариев (только ссылки на классы). Фаза B
 (`bin/indexnow`) — в волне Битрикса.
+
+### 16.6. Волна M и релиз 2026-09-08
+
+Волна M (спека 19: остатки «велосипедов» после L и ревизия PSR) реализована 2026-09-07 и выпущена **2026-09-08** (subtree
+0f65fac; `php/CHANGELOG.md` «2026-09-08», абзац «Wave M»): core 0.13.0, console 0.5.0, testing 0.3.2, sitemap 0.8.0,
+verify 0.4.0, history 0.4.0, doctrine 0.9.0, symfony-bundle 0.15.0, laravel 0.15.0, yii2 0.14.0 — Packagist, GitHub releases,
+`packagist-check --strict` ×10 в синхроне; yii3 0.1.0 — тег после регистрации `indexnowkit/yii3` на Packagist (репо
+`php-yii3`, deploy-key и секрет `SPLIT_SSH_KEY_YII3` есть, `main` доехал split-джобой). Первый CI-прогон волны нашёл то,
+чего локальный гейт на PHP 8.3 не видел, — починено до тегов: `COMPOSER=composer.monorepo.json` на уровне джобы ломал
+`composer install` инструментов (`tools/psalm`, `tools/infection`: taint ×5 и mutation ×5 красные с волны K); PHP 8.5
+объявил `SplObjectStorage::attach()/detach()/contains()` устаревшими (три observer'а, `ViaWalk`, parity-тест — на
+`offsetSet()/offsetUnset()/offsetExists()`), phpstan на 8.4+ типизирует `chr()` как `int<0, 255>` (`UrlNormalizer` —
+`hex2bin()`) и считает `ReflectionClass<T>` инвариантным (`RuleCompiler::compile()` — `@template T of object`);
+`ConformanceIdsTest` в сплите `php-testing` принимал за адаптер сам репозиторий. Полы записаны с CI: coverage yii3 92.58,
+MSI core 83.31 / console 75.37 / sitemap 83.73 / verify 84.36 / history 75.18. Урок: CDN `repo.packagist.org/p2` держит
+метаданные до 15 минут (`max-age=900`) — `bin/packagist-wait` может выйти по таймауту, когда страница пакета уже показывает
+версию; origin `packagist.org/p2/...` отвечает свежим. Дальше — Битрикс + фаза B `bin/indexnow` (спека 18 §8).
