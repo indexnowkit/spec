@@ -232,7 +232,12 @@ sitemap-части в `Sitemap\SitemapServices` и `Console\SitemapAction`; бе
 `di.php` строит `Config` (`ConfigFactory` с `critical + disabled` при ошибке), `IndexNowKit`, все интерфейсы core как
 отдельные definitions (приложение переопределяет любой в своём `di/`), `IndexNowObserver`, `VerifyingStaging`,
 `SubjectLoaderInterface` (`ActiveRecordLoader`), `Console\*Runner`, `Vocabulary('record', 'records', './yii',
-'indexnow:submit-record', ...)`. `di-console.php` — команды; `params-console.php` — `yiisoft/yii-console.commands`.
+'indexnow:submit-record', ...)`, `SampleOptions` с `RecordSampler` внутри. Классы команд — пакетов (волна L, спека 18):
+`IndexNowKit\Console\Command\*`, `Sitemap\Console\SitemapCommand`, `History\Console\HistoryCommand` / `StatusCommand`;
+`params-console.php` — `yiisoft/yii-console.commands` (имя → класс пакета, стаб `console` без пакета); `di-console.php` —
+раннеры как определения (`SitemapRunner`, `HistoryRunner`, `StatusRunner` при установленном пакете), `Console\ConfigSource`
+над фасадом для `check`/`config`, `.env` для `key:generate`; своих классов команд у пакета нет. `Http\KeyFileHandler`
+делегирует `Key\KeyFileRequestHandler` ядра (`respond()` по аргументу `{key}` маршрута).
 `routes.php` — `Route::get(key_file.pattern)->action(KeyFileHandler::class)->name('indexnow/key-file')`.
 `events-web.php` — `AfterEmit` → `FlushListener`; `events-console.php` — `ApplicationShutdown` → `FlushListener`.
 `bootstrap.php` — `new ParamExtractor(new ActiveRecordSubjectReader())` в графе (ранее статический `registerReader()`) и

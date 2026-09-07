@@ -139,14 +139,18 @@ Symfony-only ноды поверх общей схемы 02: `messenger.{bus, tr
 `indexnowkit.check`), остальные — в `docs/configuration.md`. Файл ключа отдаётся с `Vary: Host` при непустом
 `hosts`. `tests/Functional/CoreConformanceTest.php` гоняет `CoreConformanceTestCase` ядра против собранного фасада.
 
-Тела команд живут в core (`Console\*Runner`, `SymfonyStyle`); команды бандла только разбирают ввод, слова
+Тела команд живут в `indexnowkit/console` (`Console\*Runner`, `SymfonyStyle`), а с волны L (спека 18, бандл 0.15.0) и
+сами классы команд — `IndexNowKit\Console\Command\*`, `Sitemap\Console\SitemapCommand`, `History\Console\HistoryCommand` /
+`StatusCommand`; бандл их только регистрирует (`IndexNowKitLoader::loadConsole()`, теги `console.command`, лениво) и
+отдаёт конструктором раннеры, `DependencyInjection\ConsoleConfigSource` для `check`/`config` и `.env.local` для
+`key:generate`; своих классов команд у бандла нет (`Command\EntityLoader` — загрузчик, не команда). Слова
 («entity», `bin/console`) задаёт `Console\Vocabulary`. `--force` и `--dry-run` собирают отдельный `Submitter` через
 `Console\SubmitterFactory` (`NullDebounceStore` и/или `Config::with(dryRun: true)`), не трогая сервис приложения.
 Вывод — таблица со столбцом `reason` либо JSON. Строки wiring в `indexnow:check` — `Check\WiringCheck` и
 `Sitemap\Check\SitemapSpoolCheck` пакета `indexnowkit/sitemap`, тегированные `indexnowkit.check`.
 `indexnow:submit-entity` и `indexnow:explain` регистрируются только при доступной Doctrine. `indexnowkit/sitemap` —
 `suggest` (бандл 0.6.0, спека 16 §1.5/§1.7): узел `sitemap` и сервисы строит `DependencyInjection\SitemapServices`
-только при установленном пакете; без него `indexnow:sitemap` — `SitemapNotInstalledCommand` (текст установки,
+только при установленном пакете; без него `indexnow:sitemap` — `Console\Command\SitemapNotInstalledCommand` пакета `console` (текст установки,
 exit 1), `check` печатает `sitemap: not installed (…)`, блок `sitemap` в yaml компилируется и игнорируется.
 
 `indexnow:explain` проходит весь путь решения одной сущности: правила → подписка на событие → `when` →

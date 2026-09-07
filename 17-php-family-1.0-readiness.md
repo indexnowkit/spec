@@ -906,3 +906,15 @@ sitemap-джоба была пустой), `history/Pdo\Schema::table()` с `@ps
 (`--env-file`, локальный файл sitemap) подавлены в `psalm.xml` с причиной, джоба `taint.yml` блокирующая, `bin/taint`.
 Границы записаны в `core/docs/testing.md`: `parse_url()` обрывает taint, SSRF остаётся на тестах; адаптеры вне матрицы.
 
+**Волна L (2026-09-07, до пуша той же волны; спека 18).** Команды symfony/console стали классами пакетов: семь в
+`indexnowkit/console` 0.5.0 (`Console\Command\{Submit,SubmitSubjects,Explain,Check,Config,KeyGenerate}Command` и три стаба
+`*NotInstalledCommand` над абстрактным `NotInstalledCommand` — по классу на имя, потому что карта `yiisoft/yii-console`
+и ленивый загрузчик Symfony ключуют по классу), `Sitemap\Console\SitemapCommand` (sitemap 0.8.0, `SitemapRunner` получил
+`enabled`), `History\Console\{History,Status}Command` (history 0.4.0); `Console\ConfigSourceInterface` — источник
+конфигурации `check`/`config` (тир Implement). Бандл 0.15.0 удалил `Command\*Command` («Changed» с миграцией,
+`ConsoleConfigSource`, тест ленивости каждого `console.command`), Yii3 0.1.0 — `Console\*` (карта на классы пакетов,
+раннеры в `di-console.php`, стаб из контейнера при `*Installed: false`). Ядро 0.13.0 аддитивно: PSR-15
+`Key\KeyFileRequestHandler` (handler, middleware, `respond()`), `psr/http-server-*` в `require`; `Yii3\Http\KeyFileHandler`
+делегирует. Каскад: `console ^0.5` у sitemap, history, бандла, laravel, yii2, yii3; `history ^0.4` у бандла, laravel, yii2,
+yii3. Функциональные тесты команд бандла и Yii3 зелёные без правки сценариев (только ссылки на классы). Фаза B
+(`bin/indexnow`) — в волне Битрикса.
