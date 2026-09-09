@@ -1,7 +1,10 @@
 # 19b. Волна N (фаза B спеки 18): `indexnow` — CLI без фреймворка, PHAR, Docker-образ, GitHub Action
 
-Статус: **реализован 2026-09-08** (шесть коммитов поверх d39049b, до пуша; решения §9 по рекомендациям; релиз — по «действуй»:
-core 0.13.1 → sitemap 0.9.0 → cli 0.1.0 → Packagist `indexnowkit/cli` и GHCR public (пользователь) → `action@1.0.0` → Marketplace).
+Статус: **выпущен 2026-09-08/09** (решения §9 по рекомендациям): core 0.13.1, sitemap 0.9.0, cli 0.1.0 на Packagist; релиз
+`php-cli` 0.1.0 с `indexnow.phar`; образ `ghcr.io/indexnowkit/indexnow` (`0.1.0`, `0.1`, `latest`, `0.1.0-action`) public;
+действие `indexnowkit/indexnow-action` в Marketplace как «IndexNow submit (indexnowkit)» на `v1.0.1` (`v1`): Marketplace
+режет description `action.yml` на 125 символах — `action@1.0.0` не прошёл, `action@1.0.1` укоротил его и ничего больше;
+тег, запушенный сплитом через deploy-key, не запускает `release.yml` сплита (перепуш своим ключом).
 Отклонения от §3: (1) `.env` **парсится** (`Dotenv::parse()`), не загружается в процесс — реальное окружение накладывается
 явно, `$_ENV`/`putenv` не трогаются, `variables_order` неважен (§7.7 снят); (2) entrypoint действия — **PHP** (`docker/indexnow-action`),
 не shell: GitHub передаёт входы как `INPUT_BASE-URL` с дефисом (проверено по docs.github.com), sh такое не читает; `dry-run`
