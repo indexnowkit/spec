@@ -162,7 +162,8 @@
 - 2026-09-08 (волна N, спека 19b): фаза B спеки 18 — пакет `indexnowkit/cli` (`indexnow` без фреймворка: cron на любой CMS,
   Битрикс через штатный sitemap), файл состояния sqlite (дебаунс, история, `sitemap --new-only` — sitemap 0.9.0
   `SeenStoreInterface`), `Config::arrayFromEnv()` (core 0.13.1), PHAR (Box), образ `ghcr.io/indexnowkit/indexnow`, GitHub
-  Action `indexnowkit/indexnow-action`. Реализовано, до пуша; релиз по «действуй». Дальше — Битрикс-модуль (спека 14).
+  Action `indexnowkit/indexnow-action`. Выпущено 2026-09-08/09: Packagist (core 0.13.1, sitemap 0.9.0, cli 0.1.0), PHAR в
+  релизе `php-cli`, образ public, действие в Marketplace на `action@1.0.1` (`v1`). Дальше — Битрикс-модуль (спека 14).
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
