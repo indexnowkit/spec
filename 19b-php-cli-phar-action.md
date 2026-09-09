@@ -4,7 +4,9 @@
 `php-cli` 0.1.0 с `indexnow.phar`; образ `ghcr.io/indexnowkit/indexnow` (`0.1.0`, `0.1`, `latest`, `0.1.0-action`) public;
 действие `indexnowkit/indexnow-action` в Marketplace как «IndexNow submit (indexnowkit)» на `v1.0.1` (`v1`): Marketplace
 режет description `action.yml` на 125 символах — `action@1.0.0` не прошёл, `action@1.0.1` укоротил его и ничего больше;
-тег, запушенный сплитом через deploy-key, не запускает `release.yml` сплита (перепуш своим ключом).
+первый тег `cli@0.1.0` попал в `php-cli` за 8 минут до его первого `main` (тег-сплит не ждёт Packagist, main-сплит ждёт) — в
+репозитории без default branch workflow не стартует, `release.yml` запустил перепуш тега; `bin/tag` теперь отказывает
+пакету, у чьего split-репозитория ещё нет `main` (deploy-key-пуши workflow'ы запускают, PAT не нужен).
 Отклонения от §3: (1) `.env` **парсится** (`Dotenv::parse()`), не загружается в процесс — реальное окружение накладывается
 явно, `$_ENV`/`putenv` не трогаются, `variables_order` неважен (§7.7 снят); (2) entrypoint действия — **PHP** (`docker/indexnow-action`),
 не shell: GitHub передаёт входы как `INPUT_BASE-URL` с дефисом (проверено по docs.github.com), sh такое не читает; `dry-run`
