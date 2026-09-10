@@ -1,7 +1,16 @@
 # 26. Волна P: Python-семейство — аудит переноса, порядок, гейт, инфраструктура
 
-Статус: **спецификация волны, 2026-09-10; решения §9 приняты той же датой** (шаг 1 волны P — аудит и переписывание спек 20–25;
-код — после «действуй» по execution-промпту). Волна делится на P1 (core, django, sqlalchemy, fastapi → PyPI) и P2 (wagtail, flask). Основание: PHP-семейство выпущено целиком (core 0.13.1, console 0.5.0, testing 0.3.2, sitemap 0.9.0, verify 0.4.0,
+Статус: **спецификация волны, 2026-09-10; решения §9 приняты той же датой; шаг 0 (§3) выполнен 2026-09-10** — `python/`
+в workspace, uv workspace с `packages/indexnowkit` (каркас: `__version__ = 0.1.0.dev0`, console-script с `--version`), `bin/*` над
+`python:<ver>-slim` + uv 0.12.12, `ci.yml`/`release.yml`/`docs.yml`, репозиторий `indexnowkit/python` с шестью environments
+`pypi-*`, корневой `bin/spec-sync`, `$id` схем переведён на `indexnowkit/spec`; гейт зелёный на 3.12, 3.11 lowest, 3.14.
+Отклонения шага 0 от §6: (1) теги и environments по **короткому имени** — `core@0.1.0`/`pypi-core` для дистрибутива `indexnowkit`,
+`django@0.1.0`/`pypi-django` для `indexnowkit-django` (`bin/lib/package.sh`, `release.yml`); (2) `ruff` и `mypy` **запинены точно**
+(`==`) — иначе `lowest-direct` линтит другим набором правил (UP038/S603 разошлись между 0.12 и 0.16), Dependabot поднимает; (3) окружение
+uv — одно на версию Python, `var/venv/<ver>` (не `.venv`), кэш `var/uv-cache`; (4) добавлен `bin/build` (сборка `--no-sources`, twine,
+установка wheel в чистое окружение, `indexnowkit --version`) — он и есть п. 6 гейта §5; (5) dev-группа `docs` (`mkdocs-material`)
+отдельно от `dev`; (6) coverage-floor ещё не записан — первая CI-джоба 3.12/highest даёт число (принцип §2.5).
+Шаг 1 волны P — аудит и переписывание спек 20–25 — сделан; код core — следующая сессия. Волна делится на P1 (core, django, sqlalchemy, fastapi → PyPI) и P2 (wagtail, flask). Основание: PHP-семейство выпущено целиком (core 0.13.1, console 0.5.0, testing 0.3.2, sitemap 0.9.0, verify 0.4.0,
 history 0.4.0, doctrine 0.9.0, symfony-bundle 0.15.0, laravel 0.15.0, yii2 0.14.0, yii3 0.1.0, cli 0.1.0 — спека 17 §16, 19b), домен
 `indexnowkit.dev` с docs PHP под `/php/`, дистрибуция спеки 90 начата. Образец формата — спека 19b. Спеки 20–25 переписаны в
 этом формате той же датой; здесь — то, что относится к волне в целом.

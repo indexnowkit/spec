@@ -448,7 +448,8 @@ Versioning), `docs/`: `configuration.md` (таблица опций + перем
 4. **`AsyncTaskDispatcher` при остановке сервера** — незавершённые задачи отменяются; документировать как у `thread`, `check`
    предупреждает (`dispatch.asyncio`).
 5. **Expat в системном Python** — `pyexpat.EXPAT_VERSION < 2.7.2` (факт §1.2): `check` пишет `python.expat` warning; `max_bytes`
-   сохраняется. Проверить на образе `python:3.12-slim` при реализации.
+   сохраняется. Проверено на шаге 0 (2026-09-10): образ `python:3.12-slim` (CPython 3.12.14, Debian trixie) несёт
+   `expat_2.8.3` и SQLite 3.46.1 — официальный образ чист; предупреждение остаётся для системных Python дистрибутивов.
 6. **`html.parser` на битом HTML** — терпим к ошибкам, не бросает; лимит 256 КиБ; тест на обрезанный документ.
 7. **`sqlite3` и несколько процессов cron** — WAL + `busy_timeout=5000`; тест на два соединения.
 8. **`from_env` булевы** — `INDEXNOW_DRY_RUN=false` обязан быть False (урок W1); тест на все восемь литералов.
