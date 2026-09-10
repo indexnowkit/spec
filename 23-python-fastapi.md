@@ -52,8 +52,10 @@ async def create(indexnow: IndexNowKit = Depends(plugin.dependency)): ...
 - `plugin.lifespan` композируется с пользовательским (`contextlib.AsyncExitStack`; README: «свой lifespan — вызовите
   `async with plugin.lifespan(app):`»); `await plugin.startup(app)` / `shutdown(app)` — ручной путь.
 - `Services` слоя 2: `transport` → `AsyncHttpxTransport` при `httpx`, иначе `UrllibTransport` + `to_thread`; `router` →
-  `FastApiRouteUrlResolver(app)` (`url_path_for`, `RouteOrigin.root`); `dispatch`: `asyncio` (дефолт адаптера — задача на loop после
-  ответа; при остановке — warning с числом потерянных), `sync`, `callable`, `none`; `debounce.store`: `memory` (дефолт),
+  `FastApiRouteUrlResolver(app)` (`url_path_for`, `RouteOrigin.root`); `dispatch`: **`sync` (дефолт адаптера)** — `asgi.CollectorMiddleware`
+  делает `await kit.asubmit(urls)` **после** `http.response.body` с `more_body: False`: ответ у клиента, loop не заблокирован
+  (httpx async; без httpx — `to_thread`), task запроса живёт до конца отправки, и graceful shutdown uvicorn его ждёт; `asyncio` —
+  opt-in (отдельная задача на loop, теряется при остановке — `check` предупреждает `dispatch.asyncio`), `callable`, `none`; `debounce.store`: `memory` (дефолт),
   `sqlite` (путь), объект с `get/set/add` из `plugin = IndexNowKitPlugin(config, cache=redis_like)`.
 - `check`: `python -m indexnowkit check` с `INDEXNOW_*` — но роутер и wiring живут в приложении → `plugin.check_command(app)`
   печатает то же через `CheckRunner` (регистрируется как `python -m myapp.indexnow check`? — README-рецепт из 5 строк на
@@ -70,7 +72,8 @@ async def create(indexnow: IndexNowKit = Depends(plugin.dependency)): ...
 
 H01–H06 (`test_http.py` через `ASGITransport`; H06 — порядок: тело ответа получено клиентом **до** POST в `FakeTransport` — фиксируется
 временем/счётчиком в middleware-тесте), A01–A21 через драйвер спеки 22 с роутером (правила `route`), `test_lifespan.py` (создание/закрытие
-транспорта, композиция), `test_dispatch_asyncio.py` (задача выполнена, ссылка удержана, shutdown с pending — warning), `test_readme.py`.
+транспорта, композиция), `test_dispatch_sync.py` (POST после ответа, loop свободен: параллельный запрос обслуживается во время `asubmit`; shutdown ждёт хвост),
+`test_dispatch_asyncio.py` (задача выполнена, ссылка удержана, shutdown с pending — warning), `test_readme.py`.
 Матрица: FastAPI latest × (3.11–3.14) + `lowest` 0.110 на 3.11.
 
 ## 6. Документация
@@ -94,7 +97,8 @@ README EN/RU (10 строк установки, модель SQLAlchemy с `rout
 
 1. **Пакет нужен** (шесть пунктов §0 — ~250 строк, но именно они делают «fastapi indexnow» пятиминутной установкой и дают
    PyPI/SEO-имя) — да; альтернатива «только рецепт в core» — не ранжируется по запросу и повторяется у каждого пользователя.
-2. **Дефолт `dispatch: asyncio`** — да; альтернатива `sync` — POST внутри loop после ответа, блокирует воркер при `urllib`.
+2. **Дефолт `dispatch: sync` как `await asubmit()` после ответа** — принято 2026-09-10 (адверсальный проход, спека 26 §9.11); было
+   `asyncio`: detached-задача режется при остановке сервера, а awaited-хвост запроса не блокирует loop и переживает graceful shutdown.
 3. **Ставится 4-м, до Flask** — да.
 
 ## 10. Definition of Done

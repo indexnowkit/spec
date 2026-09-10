@@ -3,8 +3,9 @@
 Один набор сценариев, который обязан проходить каждый core и каждый адаптер. Идентификаторы C01–C22, A01–A21 (+A05b, A05c, A10b),
 S01–S08, H01–H06 **заморожены** как кросс-языковой контракт (спека 17 §7); новый сценарий — новый номер за диапазоном или
 вариант с суффиксом (`H01b`), удаление — никогда. Реализация — на язык (§«Тест-кит»), контракт — этот текст плюс два файла
-схем, которые `indexnowkit/spec` держит рядом: `check.schema.json` (`check --json`) и `status.schema.json` (`status --json`) — копии
-`php/packages/console/docs/check.schema.json` и `php/packages/history/docs/status.schema.json` (решение спеки 26 §9.7).
+схем **рядом, канонические**: `check.schema.json` (`check --json`) и `status.schema.json` (`status --json`); `php/packages/console/docs/`
+и `php/packages/history/docs/` (и `python/packages/indexnowkit/docs/`) держат байт-идентичные копии, проверка — `bin/spec-sync --check`
+workspace (решение спеки 26 §9.7).
 
 ## Mock-сервер
 

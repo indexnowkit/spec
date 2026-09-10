@@ -1,7 +1,7 @@
 # 26. Волна P: Python-семейство — аудит переноса, порядок, гейт, инфраструктура
 
-Статус: **спецификация волны, 2026-09-10** (шаг 1 волны P — аудит и переписывание спек 20–25; код — после «действуй» по
-execution-промпту). Основание: PHP-семейство выпущено целиком (core 0.13.1, console 0.5.0, testing 0.3.2, sitemap 0.9.0, verify 0.4.0,
+Статус: **спецификация волны, 2026-09-10; решения §9 приняты той же датой** (шаг 1 волны P — аудит и переписывание спек 20–25;
+код — после «действуй» по execution-промпту). Волна делится на P1 (core, django, sqlalchemy, fastapi → PyPI) и P2 (wagtail, flask). Основание: PHP-семейство выпущено целиком (core 0.13.1, console 0.5.0, testing 0.3.2, sitemap 0.9.0, verify 0.4.0,
 history 0.4.0, doctrine 0.9.0, symfony-bundle 0.15.0, laravel 0.15.0, yii2 0.14.0, yii3 0.1.0, cli 0.1.0 — спека 17 §16, 19b), домен
 `indexnowkit.dev` с docs PHP под `/php/`, дистрибуция спеки 90 начата. Образец формата — спека 19b. Спеки 20–25 переписаны в
 этом формате той же датой; здесь — то, что относится к волне в целом.
@@ -87,11 +87,11 @@ Django/SQLAlchemy/FastAPI на PyPI пуста (спека 20 §1.4: три па
 | 2 | `indexnowkit-django` 0.1.0 | спека 21: сигналы + `on_commit`, миксин `from_db`, команды ×9, checks, key-view, tasks/callable, история-модель, sitemaps | 4–6 |
 | 3 | `indexnowkit-sqlalchemy` 0.1.0 | спека 22: три+два события, `SessionStaging`, async | 2–3 |
 | 4 | `indexnowkit-fastapi` 0.1.0 | спека 23 | 1–2 |
-| 5 | `indexnowkit-flask` 0.1.0 (решение §9.5) | спека 24 | 1–2 |
-| 6 | `indexnowkit-wagtail` 0.1.0 (решение §9.5) | спека 25 | 1–2 |
-| — | дистрибуция (спека 90) | PyPI-метаданные, djangopackages, awesome-django PR, Django forum Show & Tell, Wagtail packages, Habr | 1 (+ пользователь) |
+| — | **релиз P1** | теги core, django, sqlalchemy (вместе, после зелёных 2 и 3 — §9.4), fastapi; PyPI; дистрибуция (спека 90): метаданные, djangopackages, awesome-django PR, Django forum Show & Tell, Habr | 1 (+ пользователь) |
+| 5 (P2) | `indexnowkit-wagtail` 0.1.0 | спека 25; Wagtail packages | 1–2 |
+| 6 (P2) | `indexnowkit-flask` 0.1.0 | спека 24 | 1–2 |
 
-Итого 17–27 дней при темпе PHP-волн; шаги 1–3 — ядро волны, 4–6 — по решениям, могут уехать в P2.
+Итого 17–27 дней при темпе PHP-волн; P1 (шаги 0–4) — до первой публикации, P2 (5–6) — после (§9.5).
 
 ## 4. Версии и совместимость
 
@@ -125,7 +125,9 @@ Django/SQLAlchemy/FastAPI на PyPI пуста (спека 20 §1.4: три па
   Раскладка: `python/pyproject.toml` (workspace root, dev-зависимости: pytest, pytest-django, pytest-asyncio, mypy, ruff, coverage,
   jsonschema, django-stubs, twine), `python/packages/{indexnowkit,indexnowkit-django,indexnowkit-sqlalchemy,indexnowkit-fastapi,
   indexnowkit-flask,indexnowkit-wagtail}/{pyproject.toml,src/,tests/,docs/,README.md,README.ru.md,CHANGELOG.md}`, `python/bin/`
-  (`ci`, `test`, `lint`, `docs-collect`, `tag`, `coverage-floor`, `config-table`), `python/docker/python/Dockerfile`
+  (`ci`, `test`, `lint`, `docs-collect`, `tag`, `coverage-floor`, `config-table`), корневой `bin/spec-sync --check` workspace
+  (§9.7: `docs/spec/{check,status}.schema.json` = копии в `php/packages/{console,history}/docs/` = `python/packages/indexnowkit/docs/`),
+  `python/docker/python/Dockerfile`
   (`python:3.12-slim` + uv; `PYTHON_VERSION` как `PHP_VERSION`), `python/docs-site/` (MkDocs Material, `BASE_URL=https://indexnowkit.dev/python/`).
 - **Что делает `gh`** (агент): создать `indexnowkit/python` (public, issues on, wiki/projects off, topics `indexnow, seo, python,
   django, sqlalchemy, fastapi`), deploy-key для subtree-push (или push по SSH-ключу пользователя, как для `php`), Pages «GitHub
@@ -170,7 +172,7 @@ Django/SQLAlchemy/FastAPI на PyPI пуста (спека 20 §1.4: три па
 - PR в `wagtail-indexnow` (спека 25 §8).
 - JS-волна, Bitrix — не начинать.
 
-## 9. `[решение]` — рекомендации (утверждает пользователь: «по рекомендациям» или правки)
+## 9. `[решение]` — приняты 2026-09-10 после адверсального прохода (пункты 4, 5, 7, 9, 11 изменены против первой рекомендации)
 
 1. **Один дистрибутив `indexnowkit` с модулями sitemap/verify/history/cli и extra `[testing]`** — (a) да. Альтернатива (b) —
    зеркало PHP из шести дистрибутивов: цена — шесть релизов на каждое изменение и каскад версий, выгода — ноль (зависимостей нет).
@@ -178,18 +180,33 @@ Django/SQLAlchemy/FastAPI на PyPI пуста (спека 20 §1.4: три па
    отсекаются на 13 месяцев раньше правила спеки 17 §7. Цена (a) — без PEP 695 до 2027-10.
 3. **Один репозиторий `indexnowkit/python`, теги `<pkg>@<ver>`, trusted publishing, без сплитов** — да. Альтернатива — сплиты как в
    PHP: цена — deploy-keys ×6 и стадии; выгоды у PyPI нет.
-4. **Порядок: core → django → sqlalchemy → fastapi → flask → wagtail; релиз core после зелёного django** — да. Альтернатива —
-   релиз core сразу: риск ломающего 0.2.0 через неделю (модель правил без ORM-кита не проверена).
-5. **Flask и Wagtail — в волну, но последними и по подтверждению** — рекомендация: **делать оба** (по 1–2 дня; SEO-имена `flask
-   indexnow`, `wagtail indexnow`; Wagtail-ниша занята слабым пакетом с 1★). Альтернатива — вынести в P2: волна короче на 3–4 дня.
-6. **Console-script `indexnowkit`** (не `indexnow`) — да; коллизия с PHP-бинарником на одном хосте. Альтернатива `indexnow-py` —
-   хуже читается.
-7. **`check.schema.json` и `status.schema.json` — копии в `docs/spec` как кросс-языковой контракт** (обновить спеку 03) — да.
+4. **Порядок: core → django → sqlalchemy → fastapi → (P2) flask → wagtail; релиз core после зелёных Django *и* SQLAlchemy** —
+   **принято 2026-09-10** (адверсальный проход). Django — post-write хуки (`post_save`), SQLAlchemy — pre-write события (`before_flush`):
+   два уровня `ObjectChangeHandler` (`*_events()` до записи vs `created()` после); PHP core стабилизировался после той же пары
+   Doctrine + Laravel. Цена: +2–3 дня до первого тега; теги core/django/sqlalchemy — вместе. Отвергнуто: релиз core сразу (ломающий
+   0.2.0 через неделю), релиз после одного Django.
+5. **Flask и Wagtail — да, оба, но как P2 после первой публикации** — **принято**: волна делится на P1 (core, django, sqlalchemy,
+   fastapi → PyPI) и P2 (wagtail первым — есть спрос: 1 111 загрузок/мес у конкурента с 1★; затем flask). Ранний релиз важнее полноты;
+   оба по 1–2 дня и ничего не блокируют. Отвергнуто: «всё в одной волне» (+3–4 дня до релиза) и «вынести насовсем».
+6. **Console-script `indexnowkit`** (не `indexnow`) — да; `uvx indexnowkit` работает только при совпадении имени скрипта с именем
+   дистрибутива (иначе `uvx --from indexnowkit indexnow`), плюс коллизия с PHP-бинарником на одном хосте. Альтернатива
+   `indexnow-py` — хуже читается.
+7. **`check.schema.json` и `status.schema.json` — канон в `docs/spec`, копии в `php/` и `python/`, проверка синхронности** —
+   **принято** (не «копии в spec»: копия без проверки дрейфует). Канон — файлы `docs/spec/check.schema.json`, `docs/spec/status.schema.json`
+   (положены этим шагом байт-идентично из `php/packages/console/docs/` и `php/packages/history/docs/`; `$id` в них пока указывает на
+   `indexnowkit/php` — перевод `$id` на `indexnowkit/spec` во всех копиях разом делает шаг 0 вместе со скриптом); в workspace лежат и `docs/spec`, и `php/`, и
+   будущий `python/` — скрипт `bin/spec-sync --check` (cmp трёх копий) в корне workspace, часть шага 0 (§6), гоняется перед коммитом.
 8. **Mock-сервер — своя реализация на язык по контракту спеки 03** — да; альтернатива — Docker service container с `router.php`:
    Docker в каждом dev-цикле и в CI Python-репо ради 140 строк.
-9. **Mutation testing — не в волне** — да (PHP добавил в волне K после стабилизации; `mutmut` на dataclass-тяжёлом коде шумит).
-10. **Django settings `INDEXNOW = {...}` snake_case вложенно** — да (спека 21 §9.1).
-11. **`dispatch: auto` в Django (tasks при production-бэкенде)** — да (спека 21 §9.3); в FastAPI дефолт `asyncio` (23 §9.2); в core `sync`.
+9. **Mutation testing — не в волне; вместо него `hypothesis`** — **принято**: property-тесты на `UrlNormalizer` (RFC 3986, punycode,
+   tracking-параметры, идемпотентность `normalize(normalize(x)) == normalize(x)`) и на парсер `Config` (`from_mapping`/`mapping_from_env`
+   round-trip, восемь булевых литералов, `INDEXNOW_HOSTS`-строки) — ~1 день внутри шага 1; нормализатор — единственное место, где
+   mutation в PHP ловил бы реальное. `mutmut` — как в PHP, после стабилизации.
+10. **Django settings `INDEXNOW = {...}` snake_case вложенно** — да (спека 21 §9.1; прецедент — вложенные lowercase-ключи `LOGGING`).
+11. **`dispatch`: Django `auto` (tasks при production-бэкенде), core `sync`, FastAPI — `sync`, выполняемый как `await asubmit()` в
+    middleware после отправки ответа** — **принято** (было: FastAPI `asyncio`). Отдельная задача loop режется при остановке uvicorn;
+    `await` после ответа не блокирует loop (httpx async), держит только task запроса — graceful shutdown его ждёт. Без httpx —
+    `to_thread`. `asyncio` остаётся opt-in (спека 23 §3, §9.2).
 12. **Wagtail — свой пакет, не PR** — да (спека 25 §9.1).
 13. **Инфраструктура `bin/` на Docker (`python:3.12-slim` + uv), Python локально не ставить** — да (правило сессии; воспроизводимость
     как у `php/bin`).

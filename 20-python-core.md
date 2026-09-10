@@ -315,7 +315,7 @@ scope — сразу диспетчер (management command, Celery-задача
 | `sync` (дефолт core) | `SyncDispatcher` | после ответа (WSGI `close()`, ASGI после body) — воркер занят ≤ `http_timeout`; CLI, задачи |
 | `none` | `NullDispatcher` | собирать, не слать |
 | `thread` | `ThreadDispatcher` | один daemon-поток с `queue.Queue`, `atexit` ждёт ≤ 5 с и пишет warning с числом потерянных URL; для сред без очереди, где sync-задержка неприемлема |
-| `asyncio` | `AsyncTaskDispatcher` | ASGI без очереди: `loop.create_task(kit.asubmit(urls))`, строгие ссылки в `set`, `add_done_callback(discard)` (факт §1.2) |
+| `asyncio` | `AsyncTaskDispatcher` | ASGI без очереди, opt-in: `loop.create_task(kit.asubmit(urls))`, строгие ссылки в `set`, `add_done_callback(discard)` (факт §1.2); при остановке сервера задачи режутся — под ASGI дефолт `sync` = `await asubmit()` в middleware после ответа (спека 23 §3, 26 §9.11) |
 | `callable` | `CallableDispatcher(fn)` | `fn(urls: list[str]) -> None` — Celery `task.delay`, RQ `queue.enqueue`, Dramatiq `send`, `django.tasks` `task.enqueue` (аргументы JSON-сериализуемы — список строк подходит) |
 | адаптерные | `tasks` (Django 6.0+), `celery`? — нет, через `callable` | §21 |
 
@@ -423,7 +423,10 @@ security-поддержки (3.11 → 3.12 после 2027-10; спека 17 §7
   Python не автоматизируется (разные репо), контракт — текст спеки.
 - Матрица CI: Python 3.11, 3.12, 3.13, 3.14 (3.15 — `experimental: true` до GA 2026-10-01); `lowest` — `uv sync --resolution
   lowest-direct`; coverage-floor (`tests/coverage-floor.txt`, `coverage.py` + ratchet-скрипт как `bin/coverage-floor`);
-  mutation (`mutmut`) — не в этой волне (спека 26 §9.9).
+  mutation (`mutmut`) — не в этой волне; вместо него **`hypothesis`** (dev-зависимость): `tests/property/test_normalizer.py`
+  (идемпотентность, punycode round-trip, tracking-параметры, `sort_query`, длина ≤ `max_url_length`) и `test_config_parsing.py`
+  (`from_mapping(to_mapping(c)) == c`, `from_mapping(mapping_from_env(env)) == from_env(env)`, булевы литералы, `INDEXNOW_HOSTS`)
+  — спека 26 §9.9.
 
 ## 6. Документация
 
