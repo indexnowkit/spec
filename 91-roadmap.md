@@ -6,7 +6,7 @@
 |---|---|---|
 | 0 | `indexnowkit/spec`: эта спецификация, mock-сервер, conformance YAML, README-шаблон, docs-сайт скелет | без этого адаптеры разъедутся |
 | 1 | PHP: core, symfony-bundle (Doctrine), laravel | самая пустая ниша (Symfony) + самый большой спрос (Laravel); автор знает PHP |
-| 2 | Python: core, django, sqlalchemy, fastapi, wagtail (обёртка над core вместо wagtail-indexnow) | Django ниша пустая, аудитория большая |
+| 2 | Python: core (со всем внутри), django, sqlalchemy, fastapi, flask и wagtail по решению — волна P, спека 26 | Django ниша пустая, аудитория большая |
 | 3 | JS: core, prisma, next, nuxt, typeorm, nestjs, drizzle, sveltekit, payload, strapi | много мелких адаптеров, ценность в покрытии |
 | 4 | Rails, Spring Boot starter, EF Core, Go (gorm) | закрыть матрицу |
 | 5 | Опционально: `google-indexing-api` адаптер (только JobPosting/BroadcastEvent, с явным `content_type`), sitemap-lastmod интеграции, API Platform, Drupal-модуль | по спросу |
@@ -164,6 +164,11 @@
   `SeenStoreInterface`), `Config::arrayFromEnv()` (core 0.13.1), PHAR (Box), образ `ghcr.io/indexnowkit/indexnow`, GitHub
   Action `indexnowkit/indexnow-action`. Выпущено 2026-09-08/09: Packagist (core 0.13.1, sitemap 0.9.0, cli 0.1.0), PHAR в
   релизе `php-cli`, образ public, действие в Marketplace на `action@1.0.1` (`v1`). Дальше — Битрикс-модуль (спека 14).
+- **2026-09-10 — фаза 2 (Python) начата**: спеки 20–25 переписаны в формате 19b после аудита переноса PHP-семейства (спека 26 §1:
+  что как есть, что иначе, что нет), новая спека 26 (порядок core → django → sqlalchemy → fastapi → flask → wagtail, гейт, uv
+  workspace в `python/`, репозиторий `indexnowkit/python` без сплитов, trusted publishing, Python ≥ 3.11, Django ≥ 5.2, SQLAlchemy
+  ≥ 2.0). Решения §9 спеки 26 — за пользователем; код — после «действуй» по execution-промпту. Открытое решение 2 (Wagtail) закрыто:
+  свой пакет (спека 25 §9).
 - Спека 17 (2026-09-05, v2 после двух адверсальных ревью): путь к 1.0 — волна 0a+hotfix (core 0.6.0: стейджинг-проверка,
   дефект дебаунса, Engine ×2, тексты), 0b (доки, AI-разделы README, docs-сайт), D (core 0.7.0: пакеты testing/console,
   OptionalPackage), E (core 0.8.0: check --json/--strict, ротация, счётчик 403, SubmissionStoreInterface, канонизация,
@@ -172,5 +177,6 @@
 ## Открытые решения
 
 1. Trademark «IndexNow» у Microsoft: допустимо ли в имени бренда. Проверить до первой публикации.
-2. Wagtail: PR в `wagtail-indexnow` или свой пакет. Дефолт: PR + обёртка через 30 дней.
+2. ~~Wagtail: PR в `wagtail-indexnow` или свой пакет.~~ Закрыто 2026-09-10: свой пакет `indexnowkit-wagtail` (спека 25 §1.3, §9 —
+   апстрим 1★, минимален по замыслу, `raise_for_status` в хуке публикации).
 3. Google Indexing API адаптер (JobPosting/BroadcastEvent): только по спросу.

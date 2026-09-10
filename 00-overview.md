@@ -57,7 +57,7 @@
 | Экосистема | Core | Адаптер |
 |---|---|---|
 | PHP | `indexnowkit/core` | `indexnowkit/symfony-bundle`, `indexnowkit/laravel`, `indexnowkit/doctrine`, `indexnowkit/api-platform` |
-| Python | `indexnowkit` | `indexnowkit-django`, `indexnowkit-sqlalchemy`, `indexnowkit-fastapi`, `indexnowkit-flask`, `indexnowkit-wagtail` |
+| Python | `indexnowkit` (core со всем внутри: sitemap, verify, history, CLI `indexnowkit`; extras `[httpx]`, `[testing]` — спека 20 §0, 26 §9.1) | `indexnowkit-django`, `indexnowkit-sqlalchemy`, `indexnowkit-fastapi`, `indexnowkit-flask`, `indexnowkit-wagtail` |
 | JS/TS | `@indexnowkit/core` | `@indexnowkit/prisma`, `@indexnowkit/typeorm`, `@indexnowkit/drizzle`, `@indexnowkit/next`, `@indexnowkit/nuxt`, `@indexnowkit/sveltekit`, `@indexnowkit/nestjs`, `@indexnowkit/payload`, `@indexnowkit/strapi` |
 | Ruby | `indexnowkit` | `indexnowkit-rails` |
 | Go | `github.com/indexnowkit/indexnow-go` | подпакеты `gorm`, `ent`, `httpkey` |
@@ -73,7 +73,7 @@ GitHub-организация `indexnowkit`. Один монорепозитор
 
 ```
 indexnowkit/php        packages/core, packages/symfony-bundle, packages/laravel, ...
-indexnowkit/python     packages/indexnowkit, packages/indexnowkit-django, ...
+indexnowkit/python     uv workspace: packages/indexnowkit, packages/indexnowkit-django, ... (без split-репозиториев, PyPI trusted publishing — спека 26 §6)
 indexnowkit/js         packages/core, packages/prisma, packages/next, ...
 indexnowkit/ruby       indexnowkit.gemspec, rails/ (один gem с опциональным railtie)
 indexnowkit/go         один модуль, подпакеты
@@ -89,7 +89,7 @@ indexnowkit/.github    общие workflows, README-шаблон, issue template
 - 02-core-architecture.md: языконезависимая архитектура core, конфиг, поведение.
 - 03-conformance.md: общий тест-набор и mock-сервер.
 - 10–14: PHP (core, doctrine, symfony-bundle, laravel, api-platform/CMS).
-- 20–25: Python (core, django, sqlalchemy, fastapi, flask, wagtail).
+- 20–25: Python (core, django, sqlalchemy, fastapi, flask, wagtail); 26 — волна P (аудит переноса PHP → Python, порядок, гейт, инфраструктура).
 - 30–39: JS/TS (core, prisma, typeorm, drizzle/mongoose/sequelize, next, nuxt, sveltekit/react-router, nestjs, payload, strapi/directus/sanity).
 - 40–44: Ruby/Rails, Go, Java/Spring, .NET, прочее (Elixir, Rust, SSG, PHP CMS).
 - 90-distribution.md: README-шаблон, каталоги, SEO пакетов, конкуренты.
@@ -98,8 +98,8 @@ indexnowkit/.github    общие workflows, README-шаблон, issue template
 ## Порядок реализации (кратко)
 
 1. spec + mock server + conformance fixtures.
-2. PHP core + Symfony bundle (Doctrine) + Laravel.
-3. Python core + Django + SQLAlchemy/FastAPI.
+2. PHP core + Symfony bundle (Doctrine) + Laravel — **выпущено целиком 2026-09-08/09** (двенадцать пакетов, спека 17 §16, 19b).
+3. Python core + Django + SQLAlchemy + FastAPI (+ Flask, Wagtail по решению) — волна P, спека 26 (спеки 20–25 переписаны 2026-09-10).
 4. TS core + Prisma + Next + Nuxt + TypeORM/NestJS.
 5. Rails, Spring Boot, EF Core, Go.
 6. CMS-адаптеры (Payload, Strapi, Wagtail, API Platform) и Google Indexing API (опционально).

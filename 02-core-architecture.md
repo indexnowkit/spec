@@ -224,10 +224,10 @@ indexnow:
 | Действие | PHP | Python | JS | Ruby |
 |---|---|---|---|---|
 | Отправить URL вручную | `$indexNow->submit([$url])` | `indexnow.submit([url])` | `await indexNow.submit([url])` | `IndexNow.submit([url])` |
-| Отправить сущность | `$indexNow->submitEntity($post)` | `indexnow.submit_object(post)` | `indexNow.submitRecord('Post', post)` | `IndexNow.submit_record(post)` |
-| Сгенерировать ключ | `bin/console indexnow:key:generate` | `manage.py indexnow_key` | `npx indexnowkit key` | `rails indexnow:key` |
-| Проверить ключ и конфиг | `indexnow:check` | `manage.py check` | `npx indexnowkit check` | `rails indexnow:check` |
-| Отправить sitemap (PHP: пакет `indexnowkit/sitemap`) | `indexnow:submit-sitemap <url>` | `manage.py indexnow_sitemap` | `npx indexnowkit sitemap` | `rails indexnow:sitemap` |
+| Отправить сущность | `$indexNow->submitEntity($post)` | `indexnow.submit_objects([post])` (Django: `submit_models`) | `indexNow.submitRecord('Post', post)` | `IndexNow.submit_record(post)` |
+| Сгенерировать ключ | `bin/console indexnow:key:generate` | `manage.py indexnow_key_generate` / `indexnowkit key generate` | `npx indexnowkit key` | `rails indexnow:key` |
+| Проверить ключ и конфиг | `indexnow:check` | `manage.py indexnow_check` (+ `manage.py check --tag indexnow`) / `indexnowkit check` | `npx indexnowkit check` | `rails indexnow:check` |
+| Отправить sitemap (PHP: пакет `indexnowkit/sitemap`; Python: модуль core) | `indexnow:sitemap [url]` | `manage.py indexnow_sitemap` / `indexnowkit sitemap` | `npx indexnowkit sitemap` | `rails indexnow:sitemap` |
 
 `check` делает: валидирует конфиг, скачивает `https://<host>/<key>.txt`, сравнивает тело,
 шлёт тестовый POST с `dry_run`. Это первая команда в README, она снимает 80% issue «не работает».

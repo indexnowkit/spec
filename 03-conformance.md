@@ -1,12 +1,16 @@
 # 03. Conformance suite и mock-сервер
 
-Один набор сценариев, который обязан проходить каждый core и каждый адаптер. Живёт в
-`indexnowkit/spec`, публикуется как Docker image `ghcr.io/indexnowkit/mock-server` и как
-JSON-fixtures.
+Один набор сценариев, который обязан проходить каждый core и каждый адаптер. Идентификаторы C01–C22, A01–A21 (+A05b, A05c, A10b),
+S01–S08, H01–H06 **заморожены** как кросс-языковой контракт (спека 17 §7); новый сценарий — новый номер за диапазоном или
+вариант с суффиксом (`H01b`), удаление — никогда. Реализация — на язык (§«Тест-кит»), контракт — этот текст плюс два файла
+схем, которые `indexnowkit/spec` держит рядом: `check.schema.json` (`check --json`) и `status.schema.json` (`status --json`) — копии
+`php/packages/console/docs/check.schema.json` и `php/packages/history/docs/status.schema.json` (решение спеки 26 §9.7).
 
 ## Mock-сервер
 
-HTTP-сервер (Go, один бинарник), эмулирует `/indexnow`:
+Контракт (реализация — своя на язык: PHP `php/packages/testing/resources/mock-server/router.php`, Python
+`indexnowkit.testing.mock_server.MockIndexNowServer` на `http.server` в процессе; Go-бинарник и Docker-образ из первой редакции
+не нужны — решение спеки 26 §9.8). HTTP-сервер эмулирует `/indexnow`:
 
 - Принимает GET и POST, валидирует по правилам протокола, отвечает кодом по сценарию.
 - Сценарий выбирается заголовком `X-Mock-Scenario: <name>` или query `?scenario=`.
@@ -14,11 +18,13 @@ HTTP-сервер (Go, один бинарник), эмулирует `/indexnow
   `http.extra_headers` (опция core только для тестов, недокументированная публично).
 - Записывает все запросы: `GET /_mock/requests` возвращает JSON-лог (метод, body, headers,
   timestamp). `DELETE /_mock/requests` очищает.
-- Сценарии: `ok200`, `pending202`, `bad400`, `forbidden403`, `unprocessable422`,
-  `ratelimit429-then-ok` (первые N запросов 429, потом 200; N в query), `timeout` (спит
-  30 с), `flaky500-then-ok`.
-- Также отдаёт `GET /{key}.txt` для сценария проверки ключа, если ключ в allowlist
-  (`MOCK_KEYS=abc,def`).
+- Сценарии (имена и коды — контракт): `ok200`, `pending202`, `bad400`, `forbidden403`, `unprocessable422`, `ratelimit429`
+  (`Retry-After: 2`), `ratelimit429-then-ok` (первые N запросов 429 с `Retry-After: 1`, потом 200; N в query `n`), `flaky500-then-ok`
+  (первые N — 503), `timeout` (спит 30 с в PHP; Python-реализация — параметр, чтобы тест на `http.timeout` шёл секунды, не
+  полминуты), неизвестный сценарий — 400. Валидация POST до сценария: тело без `host`/`key`/`urlList` — 400, больше 10 000 URL — 400,
+  URL не с `host` — 422, метод не GET/POST — 405.
+- Также отдаёт `GET /{key}.txt` для сценария проверки ключа, если ключ в allowlist (`MOCK_KEYS=abc,def`), и
+  `GET /large-document.xml[.gz]` (>100 КБ, регрессия усечения тела GET).
 
 ## Сценарии core (обязательны для всех языков)
 
@@ -86,14 +92,24 @@ HTTP-сервер (Go, один бинарник), эмулирует `/indexnow
 |---|---|---|
 | H01 | GET `/{key}.txt` | 200, `text/plain`, тело = ключ |
 | H02 | GET `/other.txt` | 404 (не отдаём произвольные файлы) |
-| H03 | `serve_key_file: false` | 404 на `/{key}.txt` |
+| H03 | `key_file.enabled: false` (`serve_key_file` — deprecated-псевдоним в PHP) | 404 на `/{key}.txt` |
 | H04 | `check` команда при доступном mock | exit 0, вывод содержит host и engine |
 | H05 | `check` при 403 | exit 1, вывод содержит подсказку |
 | H06 | submit во время HTTP-запроса, sync | POST уходит после отправки ответа клиенту (там, где платформа позволяет), иначе после обработчика |
 
+## Сценарии хранилища отправок
+
+S01–S08 (`SubmissionStoreInterface`, `core/docs/submission-store.md`): запись и чтение `Result` с временем, newest-first, фильтры по
+host и status (skipped — тоже записи), `lastFor(url)` — последняя запись с URL любого статуса, `recent(limit)`, несколько URL одного
+`Result` — одна запись, пустой стор — ничего, `purge()` там, где поддерживается. Кит — `SubmissionStoreConformanceTestCase` (PHP),
+`SubmissionStoreConformance` (Python).
+
 ## Тест-кит для адаптеров
 
-PHP: два абстрактных PHPUnit-кейса в core (`IndexNowKit\Testing\Conformance`), покрыты BC-обещанием (bc.md).
+PHP: абстрактные PHPUnit-кейсы в `indexnowkit/testing` (`IndexNowKit\Testing\Conformance`, с 0.7.0 — не в core), покрыты
+BC-обещанием (`testing/docs/bc.md`: методы драйвера растут только с реализацией по умолчанию, сценарий только добавляется).
+Python: pytest-классы-миксины в `indexnowkit[testing]` (`indexnowkit.testing.conformance`: `CoreConformance`, `OrmConformance`,
+`SubmissionStoreConformance`, `KeyFileAssertions`, `CheckOutputAssertions`, `ReadmeAssertions`), тот же драйвер — спека 20 §3.1.
 
 - `CoreConformanceTestCase` — C01, C03, C04, C06, C09–C12, C14, C19, C20 против фасада, собранного контейнером
   адаптера (адаптер отдаёт фасад, `FakeTransport` и, опционально, второй настроенный host). Сценарии, требующие
@@ -108,10 +124,12 @@ PHP: два абстрактных PHPUnit-кейса в core (`IndexNowKit\Test
 
 ## Реализация
 
-- Fixtures хранятся как YAML в `spec/conformance/*.yaml` с полями `id`, `given`, `when`,
-  `then`, `mock_scenario`. Языковые тест-раннеры читают YAML и генерируют тесты
-  параметризованно (PHPUnit DataProvider, pytest.mark.parametrize, vitest each).
-- CI каждого репозитория поднимает mock-сервер как service container.
-- Бейдж в README: «Conformance: 22/22 core, 14/14 orm, 6/6 http». Адаптер, читающий правила с модели,
-  добавляет к нему A15–A20; адаптер без такой модели (например, чисто транспортный) объявляет их
-  неприменимыми в README с обоснованием.
+- **Сценарии — абстрактные тест-кейсы на языке, не YAML** (первая редакция обещала `spec/conformance/*.yaml` с параметризацией;
+  в PHP YAML не появился, и правильно: сценарий A16 «переход `when` у одного правила при неизменном другом» не выражается данными
+  без интерпретатора). Каждый сценарий — один метод кита с идентификатором в имени/аннотации (`#[TestDox('A16 …')]` в PHP,
+  `def test_a16_…` в Python); тест полноты (`ConformanceIdsTest` PHP, `test_ids` Python) проверяет: каждый id ровно один раз,
+  диапазон заморожен, каждый фреймворк-адаптер несёт H01–H06 (адаптеры находятся по файловой системе, не по списку).
+- Mock-сервер — в процессе тестов (PHP `php -S`, Python `ThreadingHTTPServer` на порту 0); service container в CI не нужен.
+- Бейдж в README: «Conformance: 22/22 core, 21/21 orm, 6/6 http, 8/8 store». Адаптер, читающий правила с модели,
+  добавляет к нему A15–A21; адаптер без такой модели (например, чисто транспортный) объявляет их
+  неприменимыми в README с обоснованием. Сценарий, неприменимый к фреймворку, называется в README, не пропускается молча.
