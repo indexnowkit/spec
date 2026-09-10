@@ -1,7 +1,19 @@
 # 20. Python: core `indexnowkit` (волна P, шаг 1)
 
-Статус: **переписана 2026-09-10** после выпуска PHP-семейства целиком (core 0.13.1 … cli 0.1.0, спека 17 §16, 19b); прежняя
-редакция 2026-09-03 (4.3 КБ, до PHP-опыта) заменена. Порядок и гейт волны — спека 26; решения §9 там же (здесь — только
+Статус: **переписана 2026-09-10**; **шаг 1 начат 2026-09-10** — сделаны `engine`, `result`, `url` (+hypothesis), `config`, `key`,
+`http` (urllib/lazy/httpx), `client` + `ForbiddenCounter`, `debounce`, `throttle`, `retry`, `submitter`, `submission`, `collector`,
+`dispatch`, `testing` (doubles, `MockIndexNowServer`, pytest-фикстуры), `tests/conformance` C01–C22 + `test_ids`, риски §7.3/7.5/7.7
+закрыты тестом; гейт `bin/ci indexnowkit` зелёный на 3.12 и 3.11 lowest. Осталось: `rules`, `resolve`, `kit`, `adapter`, `check`,
+`console`, `sitemap`, `verify`, `history`, `cli`, `testing/conformance` (киты), README/docs. Отклонения от текста ниже:
+(1) `mapping_from_env` — только generic `INDEXNOW_<KEY_PATH>` (плюс `INDEXNOW_ENV`/`APP_ENV`), исторические короткие имена PHP
+(`INDEXNOW_LOG_URLS`, `INDEXNOW_THROTTLE_PER_MINUTE`, `INDEXNOW_USER_AGENT`, `INDEXNOW_FORBIDDEN_ESCALATION`) не поддерживаются;
+карты (`engine_aliases`, `locale_hosts`, `logging.levels`) читаются как `name=value,…`; (2) `Config.OPTIONS` — **42** ключа (у PHP 43
+с `serve_key_file`), не 45; (3) пустая строка и строка из пробелов — «не задано» для булевых; (4) `Response.body` — `bytes`
+(`.text` — utf-8 replace), sitemap/gzip читаются как байты; (5) `logging.levels` принимает Python-уровни и PSR-3 имена
+(`notice`→INFO, `alert`/`emergency`→CRITICAL); (6) `http.client` — `urllib` (дефолт), `httpx`, иначе id через локатор адаптера;
+(7) `ForbiddenCounter` считает через `add`+`incr`/`increment` кэша, иначе get+set; (8) `Collector` — scope на `contextvars`
+(`collecting()`), вне scope — буфер процесса; (9) IDNA через stdlib-кодек (IDNA 2003: `ß`→`ss`, UTS46 у PHP даёт `xn--zca`);
+(10) `dispatch: asyncio` требует `asubmit` кита, иначе `ConfigurationError`. Прежняя редакция 2026-09-03 (4.3 КБ) заменена. Порядок и гейт волны — спека 26; решения §9 там же (здесь — только
 решения по самому core, §9). Ни строчки кода до «действуй».
 
 ## 0. Цель и границы
