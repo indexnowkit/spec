@@ -133,12 +133,20 @@ Django/SQLAlchemy/FastAPI на PyPI пуста (спека 20 §1.4: три па
   django, sqlalchemy, fastapi`), deploy-key для subtree-push (или push по SSH-ключу пользователя, как для `php`), Pages «GitHub
   Actions», секреты — не нужны (trusted publishing без токенов), environment `pypi` с required reviewers? — нет (одиночный
   мейнтейнер), просто `environment: pypi`.
-- **Что делает пользователь**: аккаунт PyPI с 2FA (если нет); **pending trusted publishers** для шести имён: project name, owner
-  `indexnowkit`, repository `python`, workflow `release.yml`, environment `pypi` (docs.pypi.org/trusted-publishers; регистрируется
-  до первого аплоада — иначе первый релиз пришлось бы делать токеном); аккаунт djangopackages.org (GitHub-логин) для регистрации
+- **Что делает пользователь**: аккаунт PyPI с 2FA — **сделано 2026-09-10** (username `somework`); **pending trusted publishers** —
+  **сделано 2026-09-10 для трёх**: `indexnowkit`, `indexnowkit-django`, `indexnowkit-sqlalchemy` (owner `indexnowkit`, repository
+  `python`, workflow `release.yml`). Два ограничения PyPI, найденные при регистрации: (1) **одна тройка repo/workflow/environment —
+  один pending publisher** («matching this configuration has already been registered for a different project name»), поэтому
+  environment — **на пакет**: `pypi-core`, `pypi-django`, `pypi-sqlalchemy`, `pypi-fastapi`, `pypi-flask`, `pypi-wagtail`;
+  `release.yml` ставит `environment: pypi-${{ <короткое имя из тега> }}` (имя environment может быть выражением); шесть environments
+  создаются в репозитории `gh api` на шаге 0; (2) **не больше трёх pending publishers одновременно** («You can't register more than 3
+  pending trusted publishers at once») — publishers для fastapi/flask/wagtail добавляются после создания первых проектов (pending →
+  ordinary, слот освобождается), то есть ровно между P1 и P2. Pending publisher **не резервирует имя** (текст страницы) — резерв
+  даёт только первый релиз. Заявка на организацию `indexnowkit` (Community, URL `https://indexnowkit.dev`) — **подана 2026-09-10**,
+  ручная модерация; пакеты переводятся в неё после публикации. Остаётся: аккаунт djangopackages.org (GitHub-логин) для регистрации
   пакетов и grid; Wagtail packages; посты (форум Django, Habr) — как в PHP-дистрибуции.
 - **Релиз**: тег `<pkg>@<ver>` в монорепо → subtree-push в `indexnowkit/python` с тем же тегом → `release.yml` сплита: `uv build
-  --package <pkg> --no-sources` → `pypa/gh-action-pypi-publish@release/v1` (`permissions: id-token: write`, `environment: pypi`) →
+  --package <pkg> --no-sources` → `pypa/gh-action-pypi-publish@release/v1` (`permissions: id-token: write`, `environment: pypi-<pkg>`) →
   GitHub release из секции CHANGELOG (`bin/release-notes`, как в PHP). Порядок тегов: core → django → sqlalchemy → fastapi → flask →
   wagtail; между ними — ждать индекс PyPI (`https://pypi.org/pypi/<pkg>/<ver>/json` → 200; обычно секунды, `bin/pypi-wait`).
 - **Docs**: `docs.yml` в `indexnowkit/python` строит `docs-site` и деплоит в Pages проекта; org-сайт `indexnowkit.github.io` уже
@@ -152,7 +160,8 @@ Django/SQLAlchemy/FastAPI на PyPI пуста (спека 20 §1.4: три па
 1. **uv workspace и разный `requires-python`** — все члены на `>=3.11`; Django-адаптер на 6.x всё равно требует 3.12 у пользователя
    (решается зависимостью Django, не нашим минимумом).
 2. **Trusted publishing до первого релиза** — pending publisher обязан существовать до тега core 0.1.0; иначе `release.yml` падает
-   на 403; чек-лист «Что делает пользователь» — до шага 1 гейта релиза.
+   на 403. Три первых зарегистрированы (§6); лимит «три одновременно» означает, что перед P2 надо дождаться, пока проекты P1
+   созданы, и только потом заводить publishers fastapi/flask/wagtail — шаг чек-листа релиза P1.
 3. **Тег в монорепо и subtree**: тот же урок 19b (первый тег в пустом split-репо не запускает workflow) — здесь один репозиторий
    `python` создаётся с `main` до первого тега.
 4. **`python:3.12-slim` Expat** — версия Expat в Debian slim может быть < 2.7.2 → `check` предупреждает; тесты sitemap на bomb — с лимитом.
