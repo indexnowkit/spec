@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft-07/schema",
-    "$id": "https://github.com/indexnowkit/php/blob/main/packages/history/docs/status.schema.json",
+    "$id": "https://github.com/indexnowkit/spec/blob/main/status.schema.json",
     "title": "indexnow status --json",
     "description": "The read-only status of an indexnowkit adapter (indexnow:status --json, php yii indexnow/status --json): switches, dispatch, debounce, the 403 counter per configured host, the last successful submission and the history size. Members are only added, never removed or renamed, in a minor.",
     "type": "object",

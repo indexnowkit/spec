@@ -1,6 +1,6 @@
 {
     "$schema": "https://json-schema.org/draft-07/schema",
-    "$id": "https://github.com/indexnowkit/php/blob/main/packages/console/docs/check.schema.json",
+    "$id": "https://github.com/indexnowkit/spec/blob/main/check.schema.json",
     "title": "indexnow check --json",
     "description": "The report of the check command of every indexnowkit adapter (indexnow:check --json, php yii indexnow/check --json). `status` is the worst level of the report; `--strict` changes the exit code, not the status. Items are in the order the command prints them; group by `host` on your side when you need a per-host view. Codes are the API (core docs/check-codes.md); messages are for humans and change between versions.",
     "type": "object",
